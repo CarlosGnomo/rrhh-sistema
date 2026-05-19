@@ -16,7 +16,9 @@ export default function Jefaturas() {
   const [presupuesto, setPresupuesto] = useState(null);
   const [inputPresup, setInputPresup] = useState('');
 
-  const areaJef = perfil?.area || 'Comercial y ventas B2B';
+  const [areaSeleccionada, setAreaSeleccionada] = useState(perfil?.area || 'Ventas en tienda');
+const areaJef = areaSeleccionada;
+const esAdmin = perfil?.rol === 'admin';
 
   useEffect(() => {
     cargarHonorarios();
@@ -110,11 +112,17 @@ export default function Jefaturas() {
           <span style={{ background: '#7c3aed', color: '#fff', borderRadius: 6, padding: '4px 10px', fontSize: 12 }}>Jefaturas</span>
           <span style={{ fontSize: 15, fontWeight: 500, color: '#e2e8f0' }}>Panel de jefatura</span>
         </div>
-        <div style={{ background: '#1a1f2e', border: '0.5px solid #2d3a5a', borderRadius: 8, padding: '8px 14px' }}>
-          <span style={{ fontSize: 12, color: '#64748b' }}>Área: </span>
-          <span style={{ fontSize: 13, color: '#a78bfa', fontWeight: 500 }}>{areaJef}</span>
-        </div>
-      </div>
+        <div style={{ background: '#1a1f2e', border: '0.5px solid #2d3a5a', borderRadius: 8, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+  <span style={{ fontSize: 12, color: '#64748b' }}>Área: </span>
+  {esAdmin ? (
+    <select value={areaSeleccionada} onChange={e => setAreaSeleccionada(e.target.value)}
+      style={{ background: '#0f1117', border: '0.5px solid #2a3245', borderRadius: 6, padding: '4px 10px', fontSize: 13, color: '#a78bfa', outline: 'none', cursor: 'pointer' }}>
+      {['Comercial y ventas B2B','Ventas en tienda','Marketing','Diseño y vestuario','Diseño gráfico','Administración y finanzas','Bodega'].map(a => <option key={a}>{a}</option>)}
+    </select>
+  ) : (
+    <span style={{ fontSize: 13, color: '#a78bfa', fontWeight: 500 }}>{areaJef}</span>
+  )}
+</div>
 
       {/* Presupuesto */}
       <div style={{ ...card, border: '0.5px solid #4c1d95' }}>
