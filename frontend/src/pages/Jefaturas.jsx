@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import { useAuth } from '../AuthContext';
 
+const AREAS = ['Comercial y ventas B2B','Ventas en tienda','Marketing','Diseño y vestuario','Diseño gráfico','Administración y finanzas','Bodega'];
 const card = { background: '#1a1f2e', borderRadius: 10, padding: '14px 16px', border: '0.5px solid #2a3245', marginBottom: 10 };
 const finput = { width: '100%', background: '#0f1117', border: '0.5px solid #3b1d8a', borderRadius: 7, padding: '8px 11px', fontSize: 13, color: '#e2e8f0', outline: 'none', boxSizing: 'border-box' };
 const flabel = { fontSize: 11, color: '#64748b', marginBottom: 5, display: 'block' };
 
 export default function Jefaturas() {
   const { perfil } = useAuth();
+  const [areaSeleccionada, setAreaSeleccionada] = useState('Ventas en tienda');
   const [honorarios, setHonorarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notif, setNotif] = useState('');
@@ -15,28 +17,30 @@ export default function Jefaturas() {
   const [editForm, setEditForm] = useState({});
   const [presupuesto, setPresupuesto] = useState(null);
   const [inputPresup, setInputPresup] = useState('');
+  const [perfilListo, setPerfilListo] = useState(false);
 
-  const esAdmin = true; // temporal para probar
-const [areaSeleccionada, setAreaSeleccionada] = useState('Ventas en tienda');
-const areaJef = areaSeleccionada;
-
- useEffect(() => {
-    if (perfil && perfil.rol !== 'admin') {
-      setAreaSeleccionada(perfil.area || 'Ventas en tienda');
+  useEffect(() => {
+    if (perfil) {
+      if (perfil.rol !== 'admin' && perfil.area) {
+        setAreaSeleccionada(perfil.area);
+      }
+      setPerfilListo(true);
     }
   }, [perfil]);
 
   useEffect(() => {
-    cargarHonorarios();
-    cargarPresupuesto();
-  }, [areaSeleccionada]);
+    if (perfilListo) {
+      cargarHonorarios();
+      cargarPresupuesto();
+    }
+  }, [areaSeleccionada, perfilListo]);
 
   async function cargarHonorarios() {
     setLoading(true);
     const { data, error } = await supabase
       .from('honorarios')
       .select('*')
-      .eq('area', areaJef)
+      .eq('area', areaSeleccionada)
       .order('fecha_ingreso', { ascending: false });
     if (!error) setHonorarios(data || []);
     setLoading(false);
@@ -46,7 +50,7 @@ const areaJef = areaSeleccionada;
     const { data } = await supabase
       .from('presupuestos')
       .select('*')
-      .eq('area', areaJef)
+      .eq('area', areaSeleccionada)
       .eq('anio', new Date().getFullYear())
       .single();
     setPresupuesto(data);
@@ -55,25 +59,13 @@ const areaJef = areaSeleccionada;
   function mostrarNotif(msg) { setNotif(msg); setTimeout(() => setNotif(''), 3500); }
 
   async function aprobar(id, nombre) {
-    const { error } = await supabase
-      .from('honorarios')
-      .update({ estado: 'Aprobado' })
-      .eq('id', id);
-    if (!error) {
-      mostrarNotif(`Honorario de ${nombre} aprobado correctamente.`);
-      cargarHonorarios();
-    }
+    const { error } = await supabase.from('honorarios').update({ estado: 'Aprobado' }).eq('id', id);
+    if (!error) { mostrarNotif(`Honorario de ${nombre} aprobado.`); cargarHonorarios(); }
   }
 
   async function rechazar(id) {
-    const { error } = await supabase
-      .from('honorarios')
-      .update({ estado: 'Rechazado' })
-      .eq('id', id);
-    if (!error) {
-      mostrarNotif('Honorario rechazado.');
-      cargarHonorarios();
-    }
+    const { error } = await supabase.from('honorarios').update({ estado: 'Rechazado' }).eq('id', id);
+    if (!error) { mostrarNotif('Honorario rechazado.'); cargarHonorarios(); }
   }
 
   async function guardarPresup() {
@@ -83,23 +75,16 @@ const areaJef = areaSeleccionada;
     if (presupuesto) {
       await supabase.from('presupuestos').update({ presupuesto_anual: monto }).eq('id', presupuesto.id);
     } else {
-      await supabase.from('presupuestos').insert([{ area: areaJef, presupuesto_anual: monto, anio, actualizado_por: perfil?.correo }]);
+      await supabase.from('presupuestos').insert([{ area: areaSeleccionada, presupuesto_anual: monto, anio, actualizado_por: perfil?.correo }]);
     }
-    mostrarNotif('Presupuesto actualizado correctamente.');
+    mostrarNotif('Presupuesto actualizado.');
     setInputPresup('');
     cargarPresupuesto();
   }
 
   async function guardarEdit() {
-    const { error } = await supabase
-      .from('honorarios')
-      .update(editForm)
-      .eq('id', editId);
-    if (!error) {
-      mostrarNotif('Cambios guardados correctamente.');
-      setEditId(null);
-      cargarHonorarios();
-    }
+    const { error } = await supabase.from('honorarios').update(editForm).eq('id', editId);
+    if (!error) { mostrarNotif('Cambios guardados.'); setEditId(null); cargarHonorarios(); }
   }
 
   const pendientes = honorarios.filter(h => h.estado === 'Pendiente' || h.estado === 'En revisión');
@@ -108,6 +93,7 @@ const areaJef = areaSeleccionada;
   const disponible = presupAnual - totalConsumido;
   const pctEjecutado = presupAnual > 0 ? ((totalConsumido / presupAnual) * 100).toFixed(1) : 0;
   const estadoColor = e => ({ 'Aprobado': '#34d399', 'Pendiente': '#fbbf24', 'Rechazado': '#f87171', 'En revisión': '#60a5fa' }[e] || '#94a3b8');
+  const esAdmin = perfil?.rol === 'admin';
 
   return (
     <div>
@@ -119,18 +105,18 @@ const areaJef = areaSeleccionada;
           <span style={{ fontSize: 15, fontWeight: 500, color: '#e2e8f0' }}>Panel de jefatura</span>
         </div>
         <div style={{ background: '#1a1f2e', border: '0.5px solid #2d3a5a', borderRadius: 8, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-  <span style={{ fontSize: 12, color: '#64748b' }}>Área: </span>
-  {esAdmin ? (
-    <select value={areaSeleccionada} onChange={e => setAreaSeleccionada(e.target.value)}
-      style={{ background: '#0f1117', border: '0.5px solid #2a3245', borderRadius: 6, padding: '4px 10px', fontSize: 13, color: '#a78bfa', outline: 'none', cursor: 'pointer' }}>
-      {['Comercial y ventas B2B','Ventas en tienda','Marketing','Diseño y vestuario','Diseño gráfico','Administración y finanzas','Bodega'].map(a => <option key={a}>{a}</option>)}
-    </select>
-  ) : (
-    <span style={{ fontSize: 13, color: '#a78bfa', fontWeight: 500 }}>{areaJef}</span>
-  )}
-</div>
+          <span style={{ fontSize: 12, color: '#64748b' }}>Área: </span>
+          {esAdmin ? (
+            <select value={areaSeleccionada} onChange={e => setAreaSeleccionada(e.target.value)}
+              style={{ background: '#0f1117', border: '0.5px solid #2a3245', borderRadius: 6, padding: '4px 10px', fontSize: 13, color: '#a78bfa', outline: 'none', cursor: 'pointer' }}>
+              {AREAS.map(a => <option key={a}>{a}</option>)}
+            </select>
+          ) : (
+            <span style={{ fontSize: 13, color: '#a78bfa', fontWeight: 500 }}>{areaSeleccionada}</span>
+          )}
+        </div>
+      </div>
 
-      {/* Presupuesto */}
       <div style={{ ...card, border: '0.5px solid #4c1d95' }}>
         <div style={{ fontSize: 12, fontWeight: 500, color: '#a78bfa', marginBottom: 12 }}>Control de presupuesto anual</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
@@ -157,7 +143,6 @@ const areaJef = areaSeleccionada;
         </div>
       </div>
 
-      {/* Tabla aprobación */}
       <div style={card}>
         <div style={{ fontSize: 12, fontWeight: 500, color: '#94a3b8', marginBottom: 12, display: 'flex', justifyContent: 'space-between' }}>
           <span>Honorarios pendientes de aprobación</span>
@@ -204,7 +189,6 @@ const areaJef = areaSeleccionada;
         )}
       </div>
 
-      {/* Modal edición */}
       {editId && (
         <div style={{ background: '#12172a', border: '0.5px solid #3b1d8a', borderRadius: 12, padding: 18, marginBottom: 10 }}>
           <div style={{ fontSize: 12, fontWeight: 500, color: '#60a5fa', marginBottom: 12 }}>Editar honorario</div>
@@ -227,7 +211,6 @@ const areaJef = areaSeleccionada;
         </div>
       )}
 
-      {/* Listado completo */}
       <div style={{ fontSize: 11, fontWeight: 500, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '16px 0 10px' }}>
         Todos los honorarios del área ({honorarios.length})
       </div>
