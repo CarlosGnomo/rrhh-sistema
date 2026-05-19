@@ -16,14 +16,20 @@ export default function Jefaturas() {
   const [presupuesto, setPresupuesto] = useState(null);
   const [inputPresup, setInputPresup] = useState('');
 
-  const [areaSeleccionada, setAreaSeleccionada] = useState('Ventas en tienda');
-const areaJef = areaSeleccionada;
-const esAdmin = perfil?.rol === 'admin';
+  const esAdmin = perfil?.rol === 'admin';
+const [areaSeleccionada, setAreaSeleccionada] = useState('Ventas en tienda');
+const areaJef = esAdmin ? areaSeleccionada : (perfil?.area || 'Ventas en tienda');
+
+ useEffect(() => {
+    if (perfil && perfil.rol !== 'admin') {
+      setAreaSeleccionada(perfil.area || 'Ventas en tienda');
+    }
+  }, [perfil]);
 
   useEffect(() => {
     cargarHonorarios();
     cargarPresupuesto();
-  }, [areaJef]);
+  }, [areaSeleccionada]);
 
   async function cargarHonorarios() {
     setLoading(true);
