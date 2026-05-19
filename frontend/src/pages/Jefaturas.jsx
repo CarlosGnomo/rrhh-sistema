@@ -16,7 +16,7 @@ export default function Jefaturas() {
   const [presupuesto, setPresupuesto] = useState(null);
   const [inputPresup, setInputPresup] = useState('');
 
-  const [areaSeleccionada, setAreaSeleccionada] = useState(perfil?.area || 'Ventas en tienda');
+  const [areaSeleccionada, setAreaSeleccionada] = useState('Ventas en tienda');
 const areaJef = areaSeleccionada;
 const esAdmin = perfil?.rol === 'admin';
 
