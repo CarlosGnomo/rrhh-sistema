@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import Honorarios from './pages/Honorarios';
 import Jefaturas from './pages/Jefaturas';
 import Login from './pages/Login';
+import FormularioExterno from './pages/FormularioExterno';
 
 function RutaProtegida({ children, rolRequerido }) {
   const { user, perfil, loading } = useAuth();
@@ -71,6 +72,7 @@ function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/ingresar-honorario" element={<FormularioExterno />} />
           <Route path="/" element={<RutaProtegida><Layout><Dashboard /></Layout></RutaProtegida>} />
           <Route path="/honorarios" element={<RutaProtegida><Layout><Honorarios /></Layout></RutaProtegida>} />
           <Route path="/jefaturas" element={<RutaProtegida rolRequerido="jefatura"><Layout><Jefaturas /></Layout></RutaProtegida>} />
