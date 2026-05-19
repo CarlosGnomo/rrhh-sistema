@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import { supabase } from '../supabase';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 const dataRem = [
@@ -23,23 +25,47 @@ const dataHoras = [
 ];
 
 const COLORS = ['#8b5cf6','#ec4899','#06b6d4','#f59e0b','#34d399'];
-
-const kpis = [
-  { label: 'Rem. bruta total', value: '$91.4M', color: '#60a5fa', sub: '↑ 3.4% vs feb' },
-  { label: 'Rem. neta total', value: '$72.1M', color: '#34d399', sub: '↑ 2.9% vs feb' },
-  { label: 'Leyes sociales', value: '$16.2M', color: '#fbbf24', sub: '17.7% del bruto' },
-  { label: 'Indef. / Plazo fijo', value: '98 / 44', color: '#e2e8f0', sub: '142 trabajadores' },
-  { label: 'Honorarios mes', value: '18', color: '#60a5fa', sub: '$6.25M pagados' },
-  { label: 'Tiempo completo', value: '78', color: '#34d399', sub: 'jornada 42h' },
-  { label: 'Medio tiempo', value: '12', color: '#fbbf24', sub: 'jornada parcial' },
-  { label: 'Finiquitos', value: '5', color: '#f87171', sub: '$4.8M monto total' },
-];
-
 const card = { background: '#1a1f2e', borderRadius: 10, padding: '14px 16px', border: '0.5px solid #2a3245', marginBottom: 10 };
 const label = { fontSize: 11, color: '#64748b', marginBottom: 6 };
 const secLabel = { fontSize: 11, fontWeight: 500, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '16px 0 10px' };
 
 export default function Dashboard() {
+  const [honorarios, setHonorarios] = useState([]);
+  const [loadingH, setLoadingH] = useState(true);
+
+  useEffect(() => {
+    async function cargarHonorarios() {
+      const { data, error } = await supabase
+        .from('honorarios')
+        .select('area, monto_liquido, estado')
+        .eq('estado', 'Aprobado');
+      if (!error) setHonorarios(data || []);
+      setLoadingH(false);
+    }
+    cargarHonorarios();
+  }, []);
+
+  // Agrupar honorarios por área
+  const honorariosPorArea = honorarios.reduce((acc, h) => {
+    if (!acc[h.area]) acc[h.area] = 0;
+    acc[h.area] += h.monto_liquido;
+    return acc;
+  }, {});
+
+  const totalHonorarios = honorarios.reduce((sum, h) => sum + h.monto_liquido, 0);
+  const cantidadHonorarios = honorarios.length;
+
+  const kpis = [
+    { label: 'Rem. bruta total', value: '$91.4M', color: '#60a5fa', sub: '↑ 3.4% vs feb' },
+    { label: 'Rem. neta total', value: '$72.1M', color: '#34d399', sub: '↑ 2.9% vs feb' },
+    { label: 'Leyes sociales', value: '$16.2M', color: '#fbbf24', sub: '17.7% del bruto' },
+    { label: 'Indef. / Plazo fijo', value: '98 / 44', color: '#e2e8f0', sub: '142 trabajadores' },
+    { label: 'Honorarios mes', value: cantidadHonorarios > 0 ? cantidadHonorarios : '18', color: '#60a5fa', sub: cantidadHonorarios > 0 ? `$${(totalHonorarios/1000000).toFixed(2)}M pagados` : '$6.25M pagados' },
+    { label: 'Tiempo completo', value: '78', color: '#34d399', sub: 'jornada 42h' },
+    { label: 'Medio tiempo', value: '12', color: '#fbbf24', sub: 'jornada parcial' },
+    { label: 'Finiquitos', value: '5', color: '#f87171', sub: '$4.8M monto total' },
+  ];
+
   return (
     <div>
       <div style={secLabel}>Indicadores cuantitativos — Marzo 2025</div>
@@ -71,7 +97,7 @@ export default function Dashboard() {
           <div style={{ fontSize: 12, fontWeight: 500, color: '#94a3b8', marginBottom: 10 }}>Horas extras por área</div>
           <ResponsiveContainer width="100%" height={180}>
             <PieChart>
-              <Pie data={dataHoras} cx="50%" cy="50%" innerRadius={45} outerRadius={75} dataKey="value" label={({ name, value }) => `${value}h`} labelLine={false}>
+              <Pie data={dataHoras} cx="50%" cy="50%" innerRadius={45} outerRadius={75} dataKey="value" label={({ value }) => `${value}h`} labelLine={false}>
                 {dataHoras.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
               </Pie>
               <Tooltip formatter={v => `${v} horas`} contentStyle={{ background: '#1e2233', border: '0.5px solid #2d3a5a', color: '#e2e8f0' }} />
@@ -99,7 +125,7 @@ export default function Dashboard() {
           {[
             { text: '8 colaboradores sin contrato firmado', sub: 'Vence en menos de 5 días', color: '#f87171' },
             { text: '3 contratos a plazo fijo vencen este mes', sub: 'Requieren renovación o finiquito', color: '#fbbf24' },
-            { text: '5 boletas de honorarios sin aprobar', sub: 'Pendiente revisión y pago', color: '#fbbf24' },
+            { text: `${honorarios.filter(h => h.estado === 'Pendiente').length || 5} boletas de honorarios sin aprobar`, sub: 'Pendiente revisión y pago', color: '#fbbf24' },
             { text: 'Escala de sueldos desactualizada', sub: 'Revisión pendiente por gerencia', color: '#60a5fa' },
           ].map((a, i) => (
             <div key={i} style={{ display: 'flex', gap: 10, padding: '8px 0', borderBottom: '0.5px solid #2a3245' }}>
@@ -114,21 +140,40 @@ export default function Dashboard() {
 
         <div style={card}>
           <div style={{ fontSize: 12, fontWeight: 500, color: '#94a3b8', marginBottom: 10 }}>Honorarios por área</div>
-          {[
-            { area: 'TI', desc: 'Desarrollo software', monto: '$2.400.000' },
-            { area: 'Operaciones', desc: 'Consultoría', monto: '$1.800.000' },
-            { area: 'Comercial', desc: 'Asesoría ventas', monto: '$1.200.000' },
-            { area: 'RRHH', desc: 'Capacitación', monto: '$850.000' },
-          ].map((h, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '0.5px solid #2a3245' }}>
-              <span style={{ fontSize: 12, color: '#94a3b8' }}>{h.area} · {h.desc}</span>
-              <span style={{ fontSize: 13, fontWeight: 500, color: '#60a5fa' }}>{h.monto}</span>
-            </div>
-          ))}
-          <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, marginTop: 6, borderTop: '0.5px solid #2a3245' }}>
-            <span style={{ fontSize: 12, color: '#64748b' }}>Total honorarios marzo</span>
-            <span style={{ fontSize: 13, fontWeight: 500, color: '#e2e8f0' }}>$6.250.000</span>
-          </div>
+          {loadingH ? (
+            <div style={{ color: '#4a5568', fontSize: 12 }}>Cargando...</div>
+          ) : Object.keys(honorariosPorArea).length > 0 ? (
+            <>
+              {Object.entries(honorariosPorArea).map(([area, monto], i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '0.5px solid #2a3245' }}>
+                  <span style={{ fontSize: 12, color: '#94a3b8' }}>{area}</span>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: '#60a5fa' }}>${monto.toLocaleString('es-CL')}</span>
+                </div>
+              ))}
+              <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, marginTop: 6, borderTop: '0.5px solid #2a3245' }}>
+                <span style={{ fontSize: 12, color: '#64748b' }}>Total honorarios</span>
+                <span style={{ fontSize: 13, fontWeight: 500, color: '#e2e8f0' }}>${totalHonorarios.toLocaleString('es-CL')}</span>
+              </div>
+            </>
+          ) : (
+            <>
+              {[
+                { area: 'TI', desc: 'Desarrollo software', monto: '$2.400.000' },
+                { area: 'Operaciones', desc: 'Consultoría', monto: '$1.800.000' },
+                { area: 'Comercial', desc: 'Asesoría ventas', monto: '$1.200.000' },
+                { area: 'RRHH', desc: 'Capacitación', monto: '$850.000' },
+              ].map((h, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '0.5px solid #2a3245' }}>
+                  <span style={{ fontSize: 12, color: '#94a3b8' }}>{h.area} · {h.desc}</span>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: '#60a5fa' }}>{h.monto}</span>
+                </div>
+              ))}
+              <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, marginTop: 6, borderTop: '0.5px solid #2a3245' }}>
+                <span style={{ fontSize: 12, color: '#64748b' }}>Total honorarios marzo</span>
+                <span style={{ fontSize: 13, fontWeight: 500, color: '#e2e8f0' }}>$6.250.000</span>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

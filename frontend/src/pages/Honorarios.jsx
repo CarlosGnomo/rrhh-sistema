@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '../supabase';
 
 const AREAS = {
   'Comercial y ventas B2B': ['Comercial y ventas B2B'],
@@ -14,28 +15,65 @@ const card = { background: '#1a1f2e', borderRadius: 10, padding: '14px 16px', bo
 const finput = { width: '100%', background: '#0f1117', border: '0.5px solid #2a3245', borderRadius: 7, padding: '8px 11px', fontSize: 13, color: '#e2e8f0', outline: 'none', boxSizing: 'border-box' };
 const flabel = { fontSize: 11, color: '#64748b', marginBottom: 5, display: 'block' };
 
-const honorariosEjemplo = [
-  { nombre: 'Carla Muñoz R.', area: 'TI', subarea: 'Desarrollo', descripcion: 'Software', presupuesto: '$3.000.000', monto: '$2.400.000', estado: 'Aprobado', doc: 'BOL-001' },
-  { nombre: 'Pedro Salinas V.', area: 'Operaciones', subarea: 'Logística', descripcion: 'Consultoría', presupuesto: '$2.500.000', monto: '$1.800.000', estado: 'Aprobado', doc: 'BOL-002' },
-  { nombre: 'Jorge Herrera M.', area: 'Comercial', subarea: 'B2B', descripcion: 'Asesoría', presupuesto: '$5.000.000', monto: '$1.200.000', estado: 'Pendiente', doc: 'BOL-003' },
-  { nombre: 'Ana Torres F.', area: 'RRHH', subarea: 'Capacitación', descripcion: 'Formación', presupuesto: '$2.000.000', monto: '$850.000', estado: 'Pendiente', doc: 'BOL-004' },
-];
-
 export default function Honorarios() {
   const [showForm, setShowForm] = useState(false);
   const [area, setArea] = useState('');
   const [fileName, setFileName] = useState('');
   const [notif, setNotif] = useState('');
+  const [honorarios, setHonorarios] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [enviando, setEnviando] = useState(false);
 
-  const subareas = area ? AREAS[area] : [];
+  const [form, setForm] = useState({
+    rut: '', nombre: '', apellido_paterno: '', apellido_materno: '',
+    subarea: '', descripcion: '', monto_liquido: '', estado: 'Pendiente',
+    numero_documento: '', banco: '', tipo_cuenta: '', numero_cuenta: '', correo: ''
+  });
 
-  function handleSubmit(e) {
+  useEffect(() => { cargarHonorarios(); }, []);
+
+  async function cargarHonorarios() {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('honorarios')
+      .select('*')
+      .order('fecha_ingreso', { ascending: false });
+    if (!error) setHonorarios(data || []);
+    setLoading(false);
+  }
+
+  function handleForm(e) {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  }
+
+  async function handleSubmit(e) {
     e.preventDefault();
-    setNotif('Honorario enviado correctamente. Quedará en estado Pendiente hasta su aprobación.');
-    setShowForm(false);
+    if (!area || !form.rut || !form.nombre || !form.apellido_paterno || !form.monto_liquido) {
+      setNotif('Por favor completa todos los campos obligatorios.');
+      setTimeout(() => setNotif(''), 3000);
+      return;
+    }
+    setEnviando(true);
+    const { error } = await supabase.from('honorarios').insert([{
+      ...form,
+      area,
+      monto_liquido: parseInt(form.monto_liquido.replace(/\D/g, '')),
+      estado: 'Pendiente'
+    }]);
+    if (error) {
+      setNotif('Error al guardar. Intenta nuevamente.');
+    } else {
+      setNotif('Honorario enviado correctamente. Quedará en estado Pendiente hasta su aprobación.');
+      setShowForm(false);
+      setForm({ rut: '', nombre: '', apellido_paterno: '', apellido_materno: '', subarea: '', descripcion: '', monto_liquido: '', estado: 'Pendiente', numero_documento: '', banco: '', tipo_cuenta: '', numero_cuenta: '', correo: '' });
+      setArea('');
+      cargarHonorarios();
+    }
+    setEnviando(false);
     setTimeout(() => setNotif(''), 4000);
   }
 
+  const subareas = area ? AREAS[area] : [];
   const estadoColor = e => e === 'Aprobado' ? '#34d399' : e === 'Pendiente' ? '#fbbf24' : '#60a5fa';
 
   return (
@@ -59,60 +97,59 @@ export default function Honorarios() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
               <div>
                 <label style={flabel}>Área *</label>
-                <select style={finput} value={area} onChange={e => setArea(e.target.value)} required>
+                <select style={finput} value={area} onChange={e => { setArea(e.target.value); setForm({ ...form, subarea: '' }); }} required>
                   <option value="">— Área —</option>
                   {Object.keys(AREAS).map(a => <option key={a}>{a}</option>)}
                 </select>
               </div>
               <div>
                 <label style={flabel}>Subárea *</label>
-                <select style={finput} required>
+                <select style={finput} name="subarea" value={form.subarea} onChange={handleForm} required>
                   <option value="">— Subárea —</option>
                   {subareas.map(s => <option key={s}>{s}</option>)}
                 </select>
               </div>
               <div>
-                <label style={flabel}>Presupuesto área ($)</label>
-                <input style={finput} type="text" placeholder="Ej: 5.000.000" />
+                <label style={flabel}>Monto líquido *</label>
+                <input style={{ ...finput, color: '#4ade80', fontSize: 16, fontWeight: 500 }} name="monto_liquido" type="text" placeholder="0" value={form.monto_liquido} onChange={handleForm} required />
               </div>
               <div>
-                <label style={flabel}>Monto líquido *</label>
-                <input style={{ ...finput, color: '#4ade80', fontSize: 16, fontWeight: 500 }} type="text" placeholder="0" required />
+                <label style={flabel}>N° documento</label>
+                <input style={finput} name="numero_documento" type="text" placeholder="BOL-2025-0042" value={form.numero_documento} onChange={handleForm} />
               </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
-              <div><label style={flabel}>RUT *</label><input style={finput} type="text" placeholder="12.345.678-9" required /></div>
-              <div><label style={flabel}>Nombre *</label><input style={finput} type="text" placeholder="Nombre" required /></div>
-              <div><label style={flabel}>Apellido paterno *</label><input style={finput} type="text" placeholder="Apellido paterno" required /></div>
+              <div><label style={flabel}>RUT *</label><input style={finput} name="rut" type="text" placeholder="12.345.678-9" value={form.rut} onChange={handleForm} required /></div>
+              <div><label style={flabel}>Nombre *</label><input style={finput} name="nombre" type="text" placeholder="Nombre" value={form.nombre} onChange={handleForm} required /></div>
+              <div><label style={flabel}>Apellido paterno *</label><input style={finput} name="apellido_paterno" type="text" placeholder="Apellido paterno" value={form.apellido_paterno} onChange={handleForm} required /></div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
-              <div><label style={flabel}>Apellido materno</label><input style={finput} type="text" placeholder="Apellido materno" /></div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div><label style={flabel}>Apellido materno</label><input style={finput} name="apellido_materno" type="text" placeholder="Apellido materno" value={form.apellido_materno} onChange={handleForm} /></div>
               <div>
                 <label style={flabel}>Estado</label>
-                <select style={finput}>
+                <select style={finput} name="estado" value={form.estado} onChange={handleForm}>
                   <option>Pendiente</option>
                   <option>En revisión</option>
                   <option>Aprobado</option>
                   <option>Pagado</option>
                 </select>
               </div>
-              <div><label style={flabel}>N° documento</label><input style={finput} type="text" placeholder="BOL-2025-0042" /></div>
             </div>
 
             <div style={{ marginBottom: 12 }}>
               <label style={flabel}>Descripción del servicio *</label>
-              <textarea style={{ ...finput, resize: 'vertical', lineHeight: 1.5 }} rows={2} placeholder="Describe el servicio realizado..." required />
+              <textarea style={{ ...finput, resize: 'vertical', lineHeight: 1.5 }} name="descripcion" rows={2} placeholder="Describe el servicio realizado..." value={form.descripcion} onChange={handleForm} required />
             </div>
 
             <div style={{ marginBottom: 12 }}>
               <label style={flabel}>Datos bancarios</label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12 }}>
-                <input style={finput} type="text" placeholder="Banco" />
-                <input style={finput} type="text" placeholder="Tipo de cuenta" />
-                <input style={finput} type="text" placeholder="N° de cuenta" />
-                <input style={finput} type="email" placeholder="Correo electrónico" />
+                <input style={finput} name="banco" type="text" placeholder="Banco" value={form.banco} onChange={handleForm} />
+                <input style={finput} name="tipo_cuenta" type="text" placeholder="Tipo de cuenta" value={form.tipo_cuenta} onChange={handleForm} />
+                <input style={finput} name="numero_cuenta" type="text" placeholder="N° de cuenta" value={form.numero_cuenta} onChange={handleForm} />
+                <input style={finput} name="correo" type="email" placeholder="Correo electrónico" value={form.correo} onChange={handleForm} />
               </div>
             </div>
 
@@ -124,36 +161,44 @@ export default function Honorarios() {
               <input id="fileInput" type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }} onChange={e => setFileName(e.target.files[0]?.name || '')} />
             </div>
 
-            <button type="submit" style={{ width: '100%', background: '#1a56db', color: '#fff', border: 'none', borderRadius: 8, padding: 12, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
-              ↗ Enviar honorario
+            <button type="submit" disabled={enviando} style={{ width: '100%', background: '#1a56db', color: '#fff', border: 'none', borderRadius: 8, padding: 12, fontSize: 13, fontWeight: 500, cursor: enviando ? 'not-allowed' : 'pointer', opacity: enviando ? 0.7 : 1 }}>
+              {enviando ? 'Enviando...' : '↗ Enviar honorario'}
             </button>
           </form>
         </div>
       )}
 
-      <div style={{ fontSize: 11, fontWeight: 500, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '16px 0 10px' }}>Honorarios registrados — Marzo 2025</div>
+      <div style={{ fontSize: 11, fontWeight: 500, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '16px 0 10px' }}>
+        Honorarios registrados {loading ? '...' : `(${honorarios.length})`}
+      </div>
       <div style={{ ...card, overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-          <thead>
-            <tr>{['Prestador','Área','Subárea','Descripción','Presupuesto','Monto','Estado','N° doc.'].map(h => (
-              <th key={h} style={{ textAlign: 'left', color: '#4a5568', padding: '8px 10px', borderBottom: '0.5px solid #2a3245', fontSize: 11, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
-            ))}</tr>
-          </thead>
-          <tbody>
-            {honorariosEjemplo.map((h, i) => (
-              <tr key={i}>
-                <td style={{ padding: '8px 10px', color: '#e2e8f0', fontWeight: 500, borderBottom: '0.5px solid #1e2233' }}>{h.nombre}</td>
-                <td style={{ padding: '8px 10px', color: '#94a3b8', borderBottom: '0.5px solid #1e2233' }}>{h.area}</td>
-                <td style={{ padding: '8px 10px', color: '#94a3b8', borderBottom: '0.5px solid #1e2233' }}>{h.subarea}</td>
-                <td style={{ padding: '8px 10px', color: '#94a3b8', borderBottom: '0.5px solid #1e2233' }}>{h.descripcion}</td>
-                <td style={{ padding: '8px 10px', color: '#6d28d9', borderBottom: '0.5px solid #1e2233' }}>{h.presupuesto}</td>
-                <td style={{ padding: '8px 10px', color: '#4ade80', fontWeight: 500, borderBottom: '0.5px solid #1e2233' }}>{h.monto}</td>
-                <td style={{ padding: '8px 10px', borderBottom: '0.5px solid #1e2233' }}><span style={{ color: estadoColor(h.estado), fontWeight: 500 }}>{h.estado}</span></td>
-                <td style={{ padding: '8px 10px', color: '#64748b', borderBottom: '0.5px solid #1e2233' }}>{h.doc}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {loading ? (
+          <div style={{ color: '#4a5568', fontSize: 12, padding: 20, textAlign: 'center' }}>Cargando honorarios...</div>
+        ) : honorarios.length === 0 ? (
+          <div style={{ color: '#4a5568', fontSize: 12, padding: 20, textAlign: 'center' }}>No hay honorarios registrados aún.</div>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <thead>
+              <tr>{['Prestador','Área','Subárea','Descripción','Monto','Estado','N° doc.','Fecha'].map(h => (
+                <th key={h} style={{ textAlign: 'left', color: '#4a5568', padding: '8px 10px', borderBottom: '0.5px solid #2a3245', fontSize: 11, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
+              ))}</tr>
+            </thead>
+            <tbody>
+              {honorarios.map((h, i) => (
+                <tr key={i}>
+                  <td style={{ padding: '8px 10px', color: '#e2e8f0', fontWeight: 500, borderBottom: '0.5px solid #1e2233' }}>{h.nombre} {h.apellido_paterno}</td>
+                  <td style={{ padding: '8px 10px', color: '#94a3b8', borderBottom: '0.5px solid #1e2233' }}>{h.area}</td>
+                  <td style={{ padding: '8px 10px', color: '#94a3b8', borderBottom: '0.5px solid #1e2233' }}>{h.subarea}</td>
+                  <td style={{ padding: '8px 10px', color: '#94a3b8', borderBottom: '0.5px solid #1e2233' }}>{h.descripcion}</td>
+                  <td style={{ padding: '8px 10px', color: '#4ade80', fontWeight: 500, borderBottom: '0.5px solid #1e2233' }}>${h.monto_liquido?.toLocaleString('es-CL')}</td>
+                  <td style={{ padding: '8px 10px', borderBottom: '0.5px solid #1e2233' }}><span style={{ color: estadoColor(h.estado), fontWeight: 500 }}>{h.estado}</span></td>
+                  <td style={{ padding: '8px 10px', color: '#64748b', borderBottom: '0.5px solid #1e2233' }}>{h.numero_documento}</td>
+                  <td style={{ padding: '8px 10px', color: '#64748b', borderBottom: '0.5px solid #1e2233', whiteSpace: 'nowrap' }}>{h.fecha_ingreso ? new Date(h.fecha_ingreso).toLocaleDateString('es-CL') : '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
