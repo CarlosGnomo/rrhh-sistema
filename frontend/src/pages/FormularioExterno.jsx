@@ -163,7 +163,7 @@ export default function FormularioExterno() {
             style={{ height: 56, marginBottom: 16, objectFit: 'contain' }}
           />
           <h1 style={{ fontSize: 22, fontWeight: 500, color: '#e2e8f0', margin: '0 0 8px' }}>
-            Bienvenido al portal de ingreso de boleta de honorarios
+            BIENVENIDO AL PORTAL DE INGRESO DE BOLETAS DE HONORARIOS
           </h1>
           <p style={{ fontSize: 13, color: '#64748b', marginBottom: 4 }}>
             Gnomowear — RRHH Central
