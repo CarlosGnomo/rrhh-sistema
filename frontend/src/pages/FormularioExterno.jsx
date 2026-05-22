@@ -11,9 +11,46 @@ const AREAS = {
   'Bodega': ['Bodega'],
 };
 
-const finput = { width: '100%', background: '#0f1117', border: '0.5px solid #2a3245', borderRadius: 7, padding: '10px 14px', fontSize: 13, color: '#e2e8f0', outline: 'none', boxSizing: 'border-box' };
+const BANCOS = [
+  'Banco de Chile',
+  'Banco Estado',
+  'Banco Santander',
+  'Banco BCI',
+  'Banco Falabella',
+  'Banco Ripley',
+  'Banco Security',
+  'Banco Itaú',
+  'Banco BICE',
+  'Banco Internacional',
+  'Banco Consorcio',
+  'Banco BTG Pactual',
+  'Banco Edwards (Citi)',
+  'Coopeuch',
+  'MACH (prepago)',
+  'Tenpo (prepago)',
+  'Otro',
+];
+
+const finput = {
+  width: '100%',
+  background: '#0f1117',
+  border: '0.5px solid #2a3245',
+  borderRadius: 7,
+  padding: '10px 14px',
+  fontSize: 13,
+  color: '#e2e8f0',
+  outline: 'none',
+  boxSizing: 'border-box'
+};
 const flabel = { fontSize: 12, color: '#64748b', marginBottom: 6, display: 'block' };
-const secTitle = { fontSize: 12, fontWeight: 500, color: '#60a5fa', margin: '20px 0 12px', paddingBottom: 8, borderBottom: '0.5px solid #2a3245' };
+const secTitle = {
+  fontSize: 12,
+  fontWeight: 500,
+  color: '#60a5fa',
+  margin: '20px 0 12px',
+  paddingBottom: 8,
+  borderBottom: '0.5px solid #2a3245'
+};
 
 function fmtRut(val) {
   let v = val.replace(/[^0-9kK]/g, '');
@@ -54,9 +91,19 @@ export default function FormularioExterno() {
     setForm({ ...form, [name]: value });
   }
 
+  function resetForm() {
+    setEnviado(false);
+    setForm({
+      rut: '', nombre: '', apellido_paterno: '', apellido_materno: '',
+      subarea: '', descripcion: '', monto_liquido: '',
+      banco: '', tipo_cuenta: '', numero_cuenta: '', correo: ''
+    });
+    setArea('');
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!area || !form.rut || !form.nombre || !form.apellido_paterno || !form.monto_liquido || !form.descripcion) {
+    if (!area || !form.rut || !form.nombre || !form.apellido_paterno || !form.monto_liquido || !form.descripcion || !form.banco || !form.tipo_cuenta || !form.numero_cuenta) {
       setError('Por favor completa todos los campos obligatorios (*).');
       return;
     }
@@ -92,11 +139,11 @@ export default function FormularioExterno() {
           <div style={{ fontSize: 48, marginBottom: 16 }}>✓</div>
           <h2 style={{ fontSize: 20, fontWeight: 500, color: '#4ade80', marginBottom: 12 }}>Honorario enviado correctamente</h2>
           <p style={{ fontSize: 14, color: '#64748b', marginBottom: 24, lineHeight: 1.6 }}>
-            Tu boleta de honorarios ha sido recibida y quedará en estado <strong style={{ color: '#fbbf24' }}>Pendiente</strong> hasta que sea revisada y aprobada por el área correspondiente.
+            Tu boleta de honorarios ha sido recibida y quedara en estado{' '}
+            <strong style={{ color: '#fbbf24' }}>Pendiente</strong> hasta que sea revisada y aprobada por el area correspondiente.
           </p>
           <p style={{ fontSize: 13, color: '#4a5568' }}>Puedes cerrar esta ventana.</p>
-          <button onClick={() => { setEnviado(false); setForm({ rut: '', nombre: '', apellido_paterno: '', apellido_materno: '', subarea: '', descripcion: '', monto_liquido: '', banco: '', tipo_cuenta: '', numero_cuenta: '', correo: '' }); setArea(''); }}
-            style={{ marginTop: 24, background: '#1a56db', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: 13, cursor: 'pointer' }}>
+          <button onClick={resetForm} style={{ marginTop: 24, background: '#1a56db', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: 13, cursor: 'pointer' }}>
             Ingresar otro honorario
           </button>
         </div>
@@ -108,6 +155,7 @@ export default function FormularioExterno() {
     <div style={{ minHeight: '100vh', background: '#0f1117', padding: '32px 20px' }}>
       <div style={{ maxWidth: 680, margin: '0 auto' }}>
 
+        {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{ background: '#1a56db', color: '#fff', borderRadius: 8, padding: '6px 16px', fontSize: 13, display: 'inline-block', marginBottom: 12 }}>
             RRHH Central
@@ -116,45 +164,34 @@ export default function FormularioExterno() {
             Ingreso de boleta de honorarios
           </h1>
           <p style={{ fontSize: 13, color: '#64748b' }}>
-            Completa el formulario para registrar tu prestación de servicios
+            Completa el formulario para registrar tu prestacion de servicios
           </p>
         </div>
 
         <div style={{ background: '#1a1f2e', borderRadius: 12, padding: '28px 28px', border: '0.5px solid #2a3245' }}>
           <form onSubmit={handleSubmit}>
 
-            <div style={secTitle}>Área y servicio</div>
+            {/* SECCION 1: Area y servicio */}
+            <div style={secTitle}>1. Area y servicio</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
               <div>
-                <label style={flabel}>Área <span style={{ color: '#f87171' }}>*</span></label>
+                <label style={flabel}>Area <span style={{ color: '#f87171' }}>*</span></label>
                 <select style={finput} value={area} onChange={e => { setArea(e.target.value); setForm({ ...form, subarea: '' }); }} required>
-                  <option value="">— Seleccionar área —</option>
+                  <option value="">— Seleccionar area —</option>
                   {Object.keys(AREAS).map(a => <option key={a}>{a}</option>)}
                 </select>
               </div>
               <div>
-                <label style={flabel}>Subárea <span style={{ color: '#f87171' }}>*</span></label>
+                <label style={flabel}>Subarea <span style={{ color: '#f87171' }}>*</span></label>
                 <select style={finput} name="subarea" value={form.subarea} onChange={handleForm} required>
-                  <option value="">— Seleccionar subárea —</option>
+                  <option value="">— Seleccionar subarea —</option>
                   {subareas.map(s => <option key={s}>{s}</option>)}
                 </select>
               </div>
             </div>
 
-            <div style={{ marginBottom: 14 }}>
-              <label style={flabel}>Descripción del servicio <span style={{ color: '#f87171' }}>*</span></label>
-              <textarea style={{ ...finput, resize: 'vertical', lineHeight: 1.6 }} name="descripcion" rows={3} placeholder="Describe el servicio o trabajo realizado..." value={form.descripcion} onChange={handleForm} required />
-            </div>
-
-            <div style={{ marginBottom: 14 }}>
-              <label style={flabel}>Monto líquido <span style={{ color: '#f87171' }}>*</span></label>
-              <div style={{ display: 'flex', alignItems: 'center', background: '#0f1117', border: '0.5px solid #2a3245', borderRadius: 7, padding: '10px 14px' }}>
-                <span style={{ color: '#4a5568', fontWeight: 500, marginRight: 8, fontSize: 16 }}>$</span>
-                <input style={{ background: 'transparent', border: 'none', outline: 'none', fontSize: 20, fontWeight: 500, color: '#4ade80', width: '100%' }} name="monto_liquido" type="text" placeholder="0" value={form.monto_liquido} onChange={handleForm} required />
-              </div>
-            </div>
-
-            <div style={secTitle}>Datos personales</div>
+            {/* SECCION 2: Datos personales */}
+            <div style={secTitle}>2. Datos personales</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
               <div>
                 <label style={flabel}>RUT <span style={{ color: '#f87171' }}>*</span></label>
@@ -172,17 +209,48 @@ export default function FormularioExterno() {
                 <label style={flabel}>Apellido materno</label>
                 <input style={finput} name="apellido_materno" type="text" placeholder="Apellido materno" value={form.apellido_materno} onChange={handleForm} />
               </div>
+              <div>
+                <label style={flabel}>Correo electronico</label>
+                <input style={finput} name="correo" type="email" placeholder="tu@correo.cl" value={form.correo} onChange={handleForm} />
+              </div>
             </div>
 
-            <div style={secTitle}>Datos bancarios</div>
+            {/* SECCION 3: Monto y glosa */}
+            <div style={secTitle}>3. Monto y glosa</div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={flabel}>Monto liquido <span style={{ color: '#f87171' }}>*</span></label>
+              <div style={{ display: 'flex', alignItems: 'center', background: '#0f1117', border: '0.5px solid #2a3245', borderRadius: 7, padding: '10px 14px' }}>
+                <span style={{ color: '#4a5568', fontWeight: 500, marginRight: 8, fontSize: 16 }}>$</span>
+                <input
+                  style={{ background: 'transparent', border: 'none', outline: 'none', fontSize: 20, fontWeight: 500, color: '#4ade80', width: '100%' }}
+                  name="monto_liquido" type="text" placeholder="0"
+                  value={form.monto_liquido} onChange={handleForm} required
+                />
+              </div>
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={flabel}>Glosa / descripcion del servicio <span style={{ color: '#f87171' }}>*</span></label>
+              <textarea
+                style={{ ...finput, resize: 'none', lineHeight: 1.6 }}
+                name="descripcion" rows={2}
+                placeholder="Describe brevemente el servicio realizado..."
+                value={form.descripcion} onChange={handleForm} required
+              />
+            </div>
+
+            {/* SECCION 4: Datos bancarios */}
+            <div style={secTitle}>4. Datos bancarios</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 24 }}>
               <div>
-                <label style={flabel}>Banco</label>
-                <input style={finput} name="banco" type="text" placeholder="Ej: Banco Chile, BancoEstado..." value={form.banco} onChange={handleForm} />
+                <label style={flabel}>Banco <span style={{ color: '#f87171' }}>*</span></label>
+                <select style={finput} name="banco" value={form.banco} onChange={handleForm} required>
+                  <option value="">— Seleccionar banco —</option>
+                  {BANCOS.map(b => <option key={b}>{b}</option>)}
+                </select>
               </div>
               <div>
-                <label style={flabel}>Tipo de cuenta</label>
-                <select style={finput} name="tipo_cuenta" value={form.tipo_cuenta} onChange={handleForm}>
+                <label style={flabel}>Tipo de cuenta <span style={{ color: '#f87171' }}>*</span></label>
+                <select style={finput} name="tipo_cuenta" value={form.tipo_cuenta} onChange={handleForm} required>
                   <option value="">— Tipo de cuenta —</option>
                   <option>Cuenta corriente</option>
                   <option>Cuenta vista</option>
@@ -190,13 +258,9 @@ export default function FormularioExterno() {
                   <option>Cuenta RUT</option>
                 </select>
               </div>
-              <div>
-                <label style={flabel}>N° de cuenta</label>
-                <input style={finput} name="numero_cuenta" type="text" placeholder="N° de cuenta" value={form.numero_cuenta} onChange={handleForm} />
-              </div>
-              <div>
-                <label style={flabel}>Correo electrónico</label>
-                <input style={finput} name="correo" type="email" placeholder="tu@correo.cl" value={form.correo} onChange={handleForm} />
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={flabel}>N° de cuenta <span style={{ color: '#f87171' }}>*</span></label>
+                <input style={finput} name="numero_cuenta" type="text" placeholder="N° de cuenta" value={form.numero_cuenta} onChange={handleForm} required />
               </div>
             </div>
 
