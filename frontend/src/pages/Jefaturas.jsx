@@ -6,9 +6,9 @@ const AREAS = ['Comercial y ventas B2B','Ventas en tienda','Marketing','Diseño 
 
 const VERDE       = '#4a5e2a';
 const VERDE_CLARO = '#f0f4e8';
-const FONDO       = '#eef2e6';   // fondo pagina verde clarito
+const FONDO       = '#eef2e6';
 const BORDE       = '#c8d5a8';
-const TEXTO_EXT   = '#4a5568';   // textos fuera del formulario
+const TEXTO_EXT   = '#4a5568';
 
 const card = {
   background: '#fff',
@@ -92,6 +92,11 @@ export default function Jefaturas() {
     if (!error) { mostrarNotif('Honorario rechazado.'); cargarHonorarios(); }
   }
 
+  async function reabrir(id) {
+    const { error } = await supabase.from('honorarios').update({ estado: 'Pendiente' }).eq('id', id);
+    if (!error) { mostrarNotif('Honorario reabierto. Volvio a Pendiente.'); cargarHonorarios(); }
+  }
+
   async function guardarPresup() {
     if (!inputPresup) return;
     const monto = parseInt(inputPresup.replace(/\D/g, ''));
@@ -118,16 +123,27 @@ export default function Jefaturas() {
   const pctEjecutado = presupAnual > 0 ? ((totalConsumido / presupAnual) * 100).toFixed(1) : 0;
   const esAdmin = perfil?.rol === 'admin';
 
-  // Colores de estado — Pendiente mas intenso
   const estadoColor = e => ({
     'Aprobado':    '#16a34a',
     'Pendiente':   '#d97706',
-    'Rechazado':   '#f87171',
+    'Rechazado':   '#dc2626',
     'En revisión': '#2563eb'
   }[e] || '#94a3b8');
 
   return (
-    <div style={{ background: FONDO, minHeight: '100vh', padding: 0 }}>
+    // Wrapper que fuerza el fondo verde sobre el Layout oscuro
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      background: FONDO, zIndex: 0, pointerEvents: 'none'
+    }}>
+      <div style={{ position: 'relative', zIndex: 1, pointerEvents: 'all' }} />
+    </div>,
+    <div style={{
+      background: FONDO,
+      minHeight: 'calc(100vh - 60px)',
+      margin: '-20px',
+      padding: '20px',
+    }}>
 
       {/* Notificacion */}
       {notif && (
@@ -136,7 +152,7 @@ export default function Jefaturas() {
         </div>
       )}
 
-      {/* Header del panel */}
+      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ background: VERDE, color: '#fff', borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 600 }}>Jefaturas</span>
@@ -171,8 +187,6 @@ export default function Jefaturas() {
             </div>
           ))}
         </div>
-
-        {/* Input presupuesto SOLO admin */}
         {esAdmin && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, alignItems: 'end' }}>
             <div>
@@ -186,7 +200,7 @@ export default function Jefaturas() {
         )}
       </div>
 
-      {/* Card honorarios pendientes */}
+      {/* Honorarios pendientes */}
       <div style={card}>
         <div style={{ ...secTitle, marginBottom: 12 }}>
           Honorarios pendientes de aprobacion
@@ -268,7 +282,7 @@ export default function Jefaturas() {
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
-              <tr>{['Prestador','Subarea','Descripcion','Monto','Estado','N° doc.','Fecha'].map(h => (
+              <tr>{['Prestador','Subarea','Descripcion','Monto','Estado','N° doc.','Fecha',''].map(h => (
                 <th key={h} style={{ textAlign: 'left', color: TEXTO_EXT, padding: '8px 10px', borderBottom: '1px solid ' + BORDE, fontSize: 11, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
               ))}</tr>
             </thead>
@@ -284,6 +298,13 @@ export default function Jefaturas() {
                   </td>
                   <td style={{ padding: '8px 10px', color: TEXTO_EXT, borderBottom: '1px solid ' + BORDE }}>{h.numero_documento}</td>
                   <td style={{ padding: '8px 10px', color: TEXTO_EXT, borderBottom: '1px solid ' + BORDE, whiteSpace: 'nowrap' }}>{h.fecha_ingreso ? new Date(h.fecha_ingreso).toLocaleDateString('es-CL') : '-'}</td>
+                  <td style={{ padding: '8px 10px', borderBottom: '1px solid ' + BORDE }}>
+                    {h.estado === 'Rechazado' && (
+                      <button onClick={() => reabrir(h.id)} style={{ background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 6, padding: '3px 10px', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
+                        ↺ Reabrir
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
