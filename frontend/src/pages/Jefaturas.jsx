@@ -4,9 +4,11 @@ import { useAuth } from '../AuthContext';
 
 const AREAS = ['Comercial y ventas B2B','Ventas en tienda','Marketing','Diseño y vestuario','Diseño gráfico','Administración y finanzas','Bodega'];
 
-const VERDE = '#4a5e2a';
+const VERDE       = '#4a5e2a';
 const VERDE_CLARO = '#f0f4e8';
-const BORDE = '#c8d5a8';
+const FONDO       = '#eef2e6';   // fondo pagina verde clarito
+const BORDE       = '#c8d5a8';
+const TEXTO_EXT   = '#4a5568';   // textos fuera del formulario
 
 const card = {
   background: '#fff',
@@ -53,25 +55,19 @@ export default function Jefaturas() {
 
   useEffect(() => {
     if (perfil) {
-      if (perfil.rol !== 'admin' && perfil.area) {
-        setAreaSeleccionada(perfil.area);
-      }
+      if (perfil.rol !== 'admin' && perfil.area) setAreaSeleccionada(perfil.area);
       setPerfilListo(true);
     }
   }, [perfil]);
 
   useEffect(() => {
-    if (perfilListo) {
-      cargarHonorarios();
-      cargarPresupuesto();
-    }
+    if (perfilListo) { cargarHonorarios(); cargarPresupuesto(); }
   }, [areaSeleccionada, perfilListo]);
 
   async function cargarHonorarios() {
     setLoading(true);
     const { data, error } = await supabase
-      .from('honorarios')
-      .select('*')
+      .from('honorarios').select('*')
       .eq('area', areaSeleccionada)
       .order('fecha_ingreso', { ascending: false });
     if (!error) setHonorarios(data || []);
@@ -79,12 +75,8 @@ export default function Jefaturas() {
   }
 
   async function cargarPresupuesto() {
-    const { data } = await supabase
-      .from('presupuestos')
-      .select('*')
-      .eq('area', areaSeleccionada)
-      .eq('anio', new Date().getFullYear())
-      .single();
+    const { data } = await supabase.from('presupuestos').select('*')
+      .eq('area', areaSeleccionada).eq('anio', new Date().getFullYear()).single();
     setPresupuesto(data);
   }
 
@@ -124,11 +116,18 @@ export default function Jefaturas() {
   const presupAnual = presupuesto?.presupuesto_anual || 0;
   const disponible = presupAnual - totalConsumido;
   const pctEjecutado = presupAnual > 0 ? ((totalConsumido / presupAnual) * 100).toFixed(1) : 0;
-  const estadoColor = e => ({ 'Aprobado': '#34d399', 'Pendiente': '#fbbf24', 'Rechazado': '#f87171', 'En revisión': '#60a5fa' }[e] || '#94a3b8');
   const esAdmin = perfil?.rol === 'admin';
 
+  // Colores de estado — Pendiente mas intenso
+  const estadoColor = e => ({
+    'Aprobado':    '#16a34a',
+    'Pendiente':   '#d97706',
+    'Rechazado':   '#f87171',
+    'En revisión': '#2563eb'
+  }[e] || '#94a3b8');
+
   return (
-    <div style={{ background: '#f5f5f5', minHeight: '100vh', padding: 0 }}>
+    <div style={{ background: FONDO, minHeight: '100vh', padding: 0 }}>
 
       {/* Notificacion */}
       {notif && (
@@ -141,10 +140,10 @@ export default function Jefaturas() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ background: VERDE, color: '#fff', borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 600 }}>Jefaturas</span>
-          <span style={{ fontSize: 15, fontWeight: 500, color: '#1a1a1a' }}>Panel de jefatura</span>
+          <span style={{ fontSize: 15, fontWeight: 500, color: TEXTO_EXT }}>Panel de jefatura</span>
         </div>
         <div style={{ background: '#fff', border: '1px solid ' + BORDE, borderRadius: 8, padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 12, color: '#555' }}>Area: </span>
+          <span style={{ fontSize: 12, color: TEXTO_EXT }}>Area: </span>
           {esAdmin ? (
             <select value={areaSeleccionada} onChange={e => setAreaSeleccionada(e.target.value)}
               style={{ background: '#f9fbf5', border: '1px solid ' + BORDE, borderRadius: 6, padding: '4px 10px', fontSize: 13, color: VERDE, outline: 'none', cursor: 'pointer', fontWeight: 600 }}>
@@ -161,9 +160,9 @@ export default function Jefaturas() {
         <div style={secTitle}>Control de presupuesto anual</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: esAdmin ? 14 : 0 }}>
           {[
-            { label: 'Presupuesto anual', value: presupAnual > 0 ? `$${presupAnual.toLocaleString('es-CL')}` : 'No ingresado', color: VERDE },
+            { label: 'Presupuesto anual',     value: presupAnual > 0 ? `$${presupAnual.toLocaleString('es-CL')}` : 'No ingresado', color: VERDE },
             { label: 'Consumido (aprobados)', value: `$${totalConsumido.toLocaleString('es-CL')}`, color: '#c0392b' },
-            { label: 'Disponible', value: presupAnual > 0 ? `$${disponible.toLocaleString('es-CL')}` : '-', color: '#2e7d32', sub: `${pctEjecutado}% ejecutado` },
+            { label: 'Disponible',            value: presupAnual > 0 ? `$${disponible.toLocaleString('es-CL')}` : '-', color: '#2e7d32', sub: `${pctEjecutado}% ejecutado` },
           ].map(k => (
             <div key={k.label} style={{ background: '#fff', borderRadius: 8, padding: '12px 14px', border: '1px solid ' + BORDE }}>
               <div style={{ fontSize: 11, color: '#555', marginBottom: 5 }}>{k.label}</div>
@@ -173,7 +172,7 @@ export default function Jefaturas() {
           ))}
         </div>
 
-        {/* Input presupuesto SOLO para admin */}
+        {/* Input presupuesto SOLO admin */}
         {esAdmin && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, alignItems: 'end' }}>
             <div>
@@ -191,35 +190,35 @@ export default function Jefaturas() {
       <div style={card}>
         <div style={{ ...secTitle, marginBottom: 12 }}>
           Honorarios pendientes de aprobacion
-          <span style={{ background: '#fff3cd', color: '#856404', borderRadius: 999, padding: '2px 10px', fontSize: 11, marginLeft: 10, fontWeight: 600 }}>
+          <span style={{ background: '#fef3c7', color: '#92400e', borderRadius: 999, padding: '2px 10px', fontSize: 11, marginLeft: 10, fontWeight: 700 }}>
             {pendientes.length} pendientes
           </span>
         </div>
         {loading ? (
-          <div style={{ color: '#888', fontSize: 12, padding: 20, textAlign: 'center' }}>Cargando...</div>
+          <div style={{ color: TEXTO_EXT, fontSize: 12, padding: 20, textAlign: 'center' }}>Cargando...</div>
         ) : pendientes.length === 0 ? (
-          <div style={{ color: '#888', fontSize: 12, padding: 20, textAlign: 'center' }}>No hay honorarios pendientes. ✓</div>
+          <div style={{ color: TEXTO_EXT, fontSize: 12, padding: 20, textAlign: 'center' }}>No hay honorarios pendientes. ✓</div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, minWidth: 900 }}>
               <thead>
                 <tr>{['Prestador','Subarea','Descripcion','Monto','Banco','Tipo cuenta','N° cuenta','N° doc.','Estado','Acciones'].map(h => (
-                  <th key={h} style={{ textAlign: 'left', color: '#555', padding: '6px 8px', borderBottom: '1px solid ' + BORDE, fontSize: 10, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
+                  <th key={h} style={{ textAlign: 'left', color: TEXTO_EXT, padding: '6px 8px', borderBottom: '1px solid ' + BORDE, fontSize: 10, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}</tr>
               </thead>
               <tbody>
                 {pendientes.map(h => (
                   <tr key={h.id}>
                     <td style={{ padding: '5px 8px', color: '#1a1a1a', fontWeight: 500, borderBottom: '1px solid ' + BORDE, whiteSpace: 'nowrap' }}>{h.nombre} {h.apellido_paterno}</td>
-                    <td style={{ padding: '5px 8px', color: '#555', borderBottom: '1px solid ' + BORDE }}>{h.subarea}</td>
-                    <td style={{ padding: '5px 8px', color: '#555', borderBottom: '1px solid ' + BORDE }}>{h.descripcion}</td>
+                    <td style={{ padding: '5px 8px', color: TEXTO_EXT, borderBottom: '1px solid ' + BORDE }}>{h.subarea}</td>
+                    <td style={{ padding: '5px 8px', color: TEXTO_EXT, borderBottom: '1px solid ' + BORDE }}>{h.descripcion}</td>
                     <td style={{ padding: '5px 8px', color: VERDE, fontWeight: 600, borderBottom: '1px solid ' + BORDE }}>${h.monto_liquido?.toLocaleString('es-CL')}</td>
-                    <td style={{ padding: '5px 8px', color: '#555', borderBottom: '1px solid ' + BORDE }}>{h.banco}</td>
-                    <td style={{ padding: '5px 8px', color: '#555', borderBottom: '1px solid ' + BORDE }}>{h.tipo_cuenta}</td>
-                    <td style={{ padding: '5px 8px', color: '#555', borderBottom: '1px solid ' + BORDE, whiteSpace: 'nowrap' }}>{h.numero_cuenta}</td>
-                    <td style={{ padding: '5px 8px', color: '#888', borderBottom: '1px solid ' + BORDE }}>{h.numero_documento}</td>
+                    <td style={{ padding: '5px 8px', color: TEXTO_EXT, borderBottom: '1px solid ' + BORDE }}>{h.banco}</td>
+                    <td style={{ padding: '5px 8px', color: TEXTO_EXT, borderBottom: '1px solid ' + BORDE }}>{h.tipo_cuenta}</td>
+                    <td style={{ padding: '5px 8px', color: TEXTO_EXT, borderBottom: '1px solid ' + BORDE, whiteSpace: 'nowrap' }}>{h.numero_cuenta}</td>
+                    <td style={{ padding: '5px 8px', color: TEXTO_EXT, borderBottom: '1px solid ' + BORDE }}>{h.numero_documento}</td>
                     <td style={{ padding: '5px 8px', borderBottom: '1px solid ' + BORDE, whiteSpace: 'nowrap' }}>
-                      <span style={{ color: estadoColor(h.estado), fontWeight: 500 }}>{h.estado}</span>
+                      <span style={{ color: estadoColor(h.estado), fontWeight: 700 }}>{h.estado}</span>
                     </td>
                     <td style={{ padding: '5px 8px', borderBottom: '1px solid ' + BORDE }}>
                       <div style={{ display: 'flex', gap: 5 }}>
@@ -260,29 +259,31 @@ export default function Jefaturas() {
       )}
 
       {/* Todos los honorarios */}
-      <div style={{ fontSize: 11, fontWeight: 600, color: '#555', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '16px 0 10px' }}>
+      <div style={{ fontSize: 11, fontWeight: 600, color: TEXTO_EXT, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '16px 0 10px' }}>
         Todos los honorarios del area ({honorarios.length})
       </div>
       <div style={{ ...card, overflowX: 'auto' }}>
         {honorarios.length === 0 ? (
-          <div style={{ color: '#888', fontSize: 12, padding: 20, textAlign: 'center' }}>No hay honorarios registrados para esta area.</div>
+          <div style={{ color: TEXTO_EXT, fontSize: 12, padding: 20, textAlign: 'center' }}>No hay honorarios registrados para esta area.</div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr>{['Prestador','Subarea','Descripcion','Monto','Estado','N° doc.','Fecha'].map(h => (
-                <th key={h} style={{ textAlign: 'left', color: '#555', padding: '8px 10px', borderBottom: '1px solid ' + BORDE, fontSize: 11, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
+                <th key={h} style={{ textAlign: 'left', color: TEXTO_EXT, padding: '8px 10px', borderBottom: '1px solid ' + BORDE, fontSize: 11, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
               ))}</tr>
             </thead>
             <tbody>
               {honorarios.map((h, i) => (
                 <tr key={i}>
                   <td style={{ padding: '8px 10px', color: '#1a1a1a', fontWeight: 500, borderBottom: '1px solid ' + BORDE }}>{h.nombre} {h.apellido_paterno}</td>
-                  <td style={{ padding: '8px 10px', color: '#555', borderBottom: '1px solid ' + BORDE }}>{h.subarea}</td>
-                  <td style={{ padding: '8px 10px', color: '#555', borderBottom: '1px solid ' + BORDE }}>{h.descripcion}</td>
+                  <td style={{ padding: '8px 10px', color: TEXTO_EXT, borderBottom: '1px solid ' + BORDE }}>{h.subarea}</td>
+                  <td style={{ padding: '8px 10px', color: TEXTO_EXT, borderBottom: '1px solid ' + BORDE }}>{h.descripcion}</td>
                   <td style={{ padding: '8px 10px', color: VERDE, fontWeight: 600, borderBottom: '1px solid ' + BORDE }}>${h.monto_liquido?.toLocaleString('es-CL')}</td>
-                  <td style={{ padding: '8px 10px', borderBottom: '1px solid ' + BORDE }}><span style={{ color: estadoColor(h.estado), fontWeight: 500 }}>{h.estado}</span></td>
-                  <td style={{ padding: '8px 10px', color: '#888', borderBottom: '1px solid ' + BORDE }}>{h.numero_documento}</td>
-                  <td style={{ padding: '8px 10px', color: '#888', borderBottom: '1px solid ' + BORDE, whiteSpace: 'nowrap' }}>{h.fecha_ingreso ? new Date(h.fecha_ingreso).toLocaleDateString('es-CL') : '-'}</td>
+                  <td style={{ padding: '8px 10px', borderBottom: '1px solid ' + BORDE }}>
+                    <span style={{ color: estadoColor(h.estado), fontWeight: 700 }}>{h.estado}</span>
+                  </td>
+                  <td style={{ padding: '8px 10px', color: TEXTO_EXT, borderBottom: '1px solid ' + BORDE }}>{h.numero_documento}</td>
+                  <td style={{ padding: '8px 10px', color: TEXTO_EXT, borderBottom: '1px solid ' + BORDE, whiteSpace: 'nowrap' }}>{h.fecha_ingreso ? new Date(h.fecha_ingreso).toLocaleDateString('es-CL') : '-'}</td>
                 </tr>
               ))}
             </tbody>
