@@ -18,7 +18,6 @@ const BANCOS = [
   'Banco Edwards (Citi)','Coopeuch','MACH (prepago)','Tenpo (prepago)','Otro',
 ];
 
-// Colores base
 const VERDE = '#4a5e2a';
 const VERDE_CLARO = '#f0f4e8';
 const BORDE = '#c8d5a8';
@@ -70,7 +69,8 @@ export default function FormularioExterno() {
   const [form, setForm] = useState({
     rut: '', nombre: '', apellido_paterno: '', apellido_materno: '',
     subarea: '', descripcion: '', monto_liquido: '',
-    banco: '', tipo_cuenta: '', numero_cuenta: '', correo: ''
+    banco: '', tipo_cuenta: '', numero_cuenta: '', correo: '',
+    numero_documento: ''
   });
 
   const subareas = area ? AREAS[area] : [];
@@ -88,25 +88,38 @@ export default function FormularioExterno() {
 
   function resetForm() {
     setEnviado(false);
-    setForm({ rut: '', nombre: '', apellido_paterno: '', apellido_materno: '', subarea: '', descripcion: '', monto_liquido: '', banco: '', tipo_cuenta: '', numero_cuenta: '', correo: '' });
+    setForm({
+      rut: '', nombre: '', apellido_paterno: '', apellido_materno: '',
+      subarea: '', descripcion: '', monto_liquido: '',
+      banco: '', tipo_cuenta: '', numero_cuenta: '', correo: '',
+      numero_documento: ''
+    });
     setArea('');
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!area || !form.rut || !form.nombre || !form.apellido_paterno || !form.monto_liquido || !form.descripcion || !form.banco || !form.tipo_cuenta || !form.numero_cuenta) {
+    if (!area || !form.rut || !form.nombre || !form.apellido_paterno || !form.monto_liquido || !form.descripcion || !form.banco || !form.tipo_cuenta || !form.numero_cuenta || !form.numero_documento) {
       setError('Por favor completa todos los campos obligatorios (*).');
       return;
     }
     setError('');
     setEnviando(true);
     const { error: err } = await supabase.from('honorarios').insert([{
-      rut: form.rut, nombre: form.nombre, apellido_paterno: form.apellido_paterno,
-      apellido_materno: form.apellido_materno, area, subarea: form.subarea,
+      rut: form.rut,
+      nombre: form.nombre,
+      apellido_paterno: form.apellido_paterno,
+      apellido_materno: form.apellido_materno,
+      area,
+      subarea: form.subarea,
       descripcion: form.descripcion,
       monto_liquido: parseInt(form.monto_liquido.replace(/\D/g, '')),
-      banco: form.banco, tipo_cuenta: form.tipo_cuenta,
-      numero_cuenta: form.numero_cuenta, correo: form.correo, estado: 'Pendiente'
+      banco: form.banco,
+      tipo_cuenta: form.tipo_cuenta,
+      numero_cuenta: form.numero_cuenta,
+      correo: form.correo,
+      numero_documento: form.numero_documento,
+      estado: 'Pendiente'
     }]);
     setEnviando(false);
     if (err) { setError('Error al enviar. Por favor intenta nuevamente.'); }
@@ -138,8 +151,8 @@ export default function FormularioExterno() {
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <img src="/logo-gnomo.png" alt="Gnomowear" style={{ height: 60, marginBottom: 16, objectFit: 'contain' }} />
-          <h1 style={{ fontSize: 22, fontWeight: 600, color: '#1a1a1a', margin: '0 0 6px', letterSpacing: '0.01em'
-            BIENVENIDO AL PORTAL DE INGRESO DE BOLETA DE HONORARIOS
+          <h1 style={{ fontSize: 22, fontWeight: 600, color: '#1a1a1a', margin: '0 0 6px', letterSpacing: '0.01em' }}>
+            Bienvenido al portal de ingreso de boleta de honorarios
           </h1>
           <p style={{ fontSize: 13, color: '#555', marginBottom: 2 }}>Gnomowear — RRHH Central</p>
           <p style={{ fontSize: 12, color: '#888' }}>Completa el formulario para registrar tu prestacion de servicios</p>
@@ -213,6 +226,18 @@ export default function FormularioExterno() {
                 name="descripcion" rows={2}
                 placeholder="Describe brevemente el servicio realizado..."
                 value={form.descripcion} onChange={handleForm} required
+              />
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={flabel}>N° de boleta <span style={{ color: '#c0392b' }}>*</span></label>
+              <input
+                style={finput}
+                name="numero_documento"
+                type="number"
+                placeholder="Ej: 12345"
+                value={form.numero_documento}
+                onChange={handleForm}
+                required
               />
             </div>
 
