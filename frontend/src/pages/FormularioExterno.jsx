@@ -152,7 +152,7 @@ export default function FormularioExterno() {
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <img src="/logo-gnomo.png" alt="Gnomowear" style={{ height: 60, marginBottom: 16, objectFit: 'contain' }} />
           <h1 style={{ fontSize: 22, fontWeight: 600, color: '#1a1a1a', margin: '0 0 6px', letterSpacing: '0.01em' }}>
-            Bienvenido al portal de ingreso de boleta de honorarios
+            BIENVENIDO AL PORTAL DE INGRESO DE BOLETA DE HONORARIOS
           </h1>
           <p style={{ fontSize: 13, color: '#555', marginBottom: 2 }}>Gnomowear — RRHH Central</p>
           <p style={{ fontSize: 12, color: '#888' }}>Completa el formulario para registrar tu prestacion de servicios</p>
