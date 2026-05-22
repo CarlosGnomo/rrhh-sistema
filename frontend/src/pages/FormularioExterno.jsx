@@ -157,13 +157,18 @@ export default function FormularioExterno() {
 
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ background: '#1a56db', color: '#fff', borderRadius: 8, padding: '6px 16px', fontSize: 13, display: 'inline-block', marginBottom: 12 }}>
-            RRHH Central
-          </div>
+          <img
+            src="/logo-gnomo.png"
+            alt="Gnomowear"
+            style={{ height: 56, marginBottom: 16, objectFit: 'contain' }}
+          />
           <h1 style={{ fontSize: 22, fontWeight: 500, color: '#e2e8f0', margin: '0 0 8px' }}>
-            Ingreso de boleta de honorarios
+            Bienvenido al portal de ingreso de boleta de honorarios
           </h1>
-          <p style={{ fontSize: 13, color: '#64748b' }}>
+          <p style={{ fontSize: 13, color: '#64748b', marginBottom: 4 }}>
+            Gnomowear — RRHH Central
+          </p>
+          <p style={{ fontSize: 12, color: '#4a5568' }}>
             Completa el formulario para registrar tu prestacion de servicios
           </p>
         </div>
