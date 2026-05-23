@@ -29,7 +29,64 @@ const estadoColorSancion = e => ({'Vigente':'#dc2626','Cumplida':'#16a34a','Apel
 const estadoColorAcuerdo = e => ({'En investigacion':'#dc2626','Acuerdo firmado':'#16a34a','Cerrado':'#6b7280','Derivado DT':'#2563eb'}[e]||'#6b7280');
 
 function Badge({ text, color }) {
-  return <span style={{ background: color+'22', color, border:'1px solid '+color+'55', borderRadius:999, padding:'2px 10px', fontSize:11, fontWeight:700 }}>{text}</span>;
+  return <span style={{ background: color+'22', color, border:'1px solid '+color+'55', borderRadius:999, padding:'3px 12px', fontSize:11, fontWeight:700, whiteSpace:'nowrap', display:'inline-block' }}>{text}</span>;
+}
+
+function PanelDetalle({ item, tipo, onCerrar }) {
+  const hoy = new Date();
+  return (
+    <div style={{ background:VERDE_CLARO, border:'1px solid '+BORDE, borderRadius:12, padding:20, marginBottom:12 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+        <div style={{ fontSize:13, fontWeight:700, color:VERDE }}>Detalle del registro</div>
+        <button onClick={onCerrar} style={{ background:'transparent', border:'1px solid '+BORDE, borderRadius:6, padding:'4px 12px', fontSize:12, color:'#555', cursor:'pointer' }}>✕ Cerrar</button>
+      </div>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+        {tipo === 'juicio' && <>
+          <div><div style={{ fontSize:11, color:'#888' }}>Trabajador</div><div style={{ fontWeight:600, color:'#1a1a1a' }}>{item.nombre_trabajador}</div></div>
+          <div><div style={{ fontSize:11, color:'#888' }}>RIT</div><div style={{ color:TEXTO }}>{item.rit||'-'}</div></div>
+          <div><div style={{ fontSize:11, color:'#888' }}>Tribunal</div><div style={{ color:TEXTO }}>{item.tribunal}</div></div>
+          <div><div style={{ fontSize:11, color:'#888' }}>Fecha despido</div><div style={{ color:TEXTO }}>{item.fecha_despido ? new Date(item.fecha_despido+'T12:00:00').toLocaleDateString('es-CL') : '-'}</div></div>
+          <div><div style={{ fontSize:11, color:'#888' }}>Abogado patrocinante</div><div style={{ color:TEXTO }}>{item.abogado_patrocinante||'-'}</div></div>
+          <div><div style={{ fontSize:11, color:'#888' }}>Tipo demanda</div><div style={{ color:TEXTO }}>{item.tipo_demanda}</div></div>
+          <div><div style={{ fontSize:11, color:'#888' }}>Estado</div><div>{item.estado}</div></div>
+          <div><div style={{ fontSize:11, color:'#888' }}>Monto demanda</div><div style={{ color:'#dc2626', fontWeight:600 }}>{item.monto_demanda ? '$'+item.monto_demanda.toLocaleString('es-CL') : '-'}</div></div>
+          <div><div style={{ fontSize:11, color:'#888' }}>Abogado Gnomo</div><div style={{ color:TEXTO }}>{item.abogado_gnomo||'-'}</div></div>
+          <div><div style={{ fontSize:11, color:'#888' }}>Honorarios</div><div style={{ color:TEXTO }}>{item.honorarios ? '$'+item.honorarios.toLocaleString('es-CL') : '-'}</div></div>
+          {item.link_drive && <div style={{ gridColumn:'1/-1' }}><div style={{ fontSize:11, color:'#888' }}>Carpeta Drive</div><a href={item.link_drive} target="_blank" rel="noopener noreferrer" style={{ color:VERDE, fontWeight:600 }}>Abrir carpeta →</a></div>}
+          <div style={{ gridColumn:'1/-1' }}>
+            <div style={{ fontSize:11, color:'#888', marginBottom:6 }}>Fechas de audiencia</div>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+              {(item.fechas_audiencias||[]).length === 0 ? <span style={{ color:'#888', fontSize:12 }}>Sin fechas registradas</span>
+              : (item.fechas_audiencias||[]).sort().map(f => {
+                const fd = new Date(f+'T12:00:00');
+                const alerta = fd >= hoy && (fd-hoy)/(1000*60*60*24) <= 7;
+                return <span key={f} style={{ background: alerta ? '#fee2e2' : '#fff', border:'1px solid '+(alerta?'#dc2626':BORDE), borderRadius:6, padding:'4px 12px', fontSize:12, color: alerta ? '#dc2626' : TEXTO, fontWeight: alerta ? 700 : 400 }}>
+                  {alerta ? '⚠ ' : ''}{fd.toLocaleDateString('es-CL')}
+                </span>;
+              })}
+            </div>
+          </div>
+          <div style={{ gridColumn:'1/-1' }}><div style={{ fontSize:11, color:'#888', marginBottom:4 }}>Observaciones</div><div style={{ background:'#fff', border:'1px solid '+BORDE, borderRadius:6, padding:'10px 12px', fontSize:13, color:TEXTO, whiteSpace:'pre-wrap' }}>{item.observaciones||'Sin observaciones.'}</div></div>
+        </>}
+        {tipo === 'sancion' && <>
+          <div><div style={{ fontSize:11, color:'#888' }}>Trabajador</div><div style={{ fontWeight:600, color:'#1a1a1a' }}>{item.nombre_trabajador}</div></div>
+          <div><div style={{ fontSize:11, color:'#888' }}>Area</div><div style={{ color:TEXTO }}>{item.area}</div></div>
+          <div><div style={{ fontSize:11, color:'#888' }}>Tipo sancion</div><div style={{ color:TEXTO }}>{item.tipo_sancion}</div></div>
+          <div><div style={{ fontSize:11, color:'#888' }}>Fecha</div><div style={{ color:TEXTO }}>{item.fecha ? new Date(item.fecha+'T12:00:00').toLocaleDateString('es-CL') : '-'}</div></div>
+          <div><div style={{ fontSize:11, color:'#888' }}>Estado</div><div>{item.estado}</div></div>
+          <div style={{ gridColumn:'1/-1' }}><div style={{ fontSize:11, color:'#888', marginBottom:4 }}>Motivo</div><div style={{ background:'#fff', border:'1px solid '+BORDE, borderRadius:6, padding:'10px 12px', fontSize:13, color:TEXTO }}>{item.motivo}</div></div>
+          <div style={{ gridColumn:'1/-1' }}><div style={{ fontSize:11, color:'#888', marginBottom:4 }}>Observaciones</div><div style={{ background:'#fff', border:'1px solid '+BORDE, borderRadius:6, padding:'10px 12px', fontSize:13, color:TEXTO, whiteSpace:'pre-wrap' }}>{item.observaciones||'Sin observaciones.'}</div></div>
+        </>}
+        {tipo === 'acuerdo' && <>
+          <div style={{ gridColumn:'1/-1' }}><div style={{ fontSize:11, color:'#888' }}>Trabajador(es)</div><div style={{ fontWeight:600, color:'#1a1a1a' }}>{item.trabajadores}</div></div>
+          <div><div style={{ fontSize:11, color:'#888' }}>Tipo</div><div style={{ color:TEXTO }}>{item.tipo}</div></div>
+          <div><div style={{ fontSize:11, color:'#888' }}>Fecha inicio</div><div style={{ color:TEXTO }}>{item.fecha_inicio ? new Date(item.fecha_inicio+'T12:00:00').toLocaleDateString('es-CL') : '-'}</div></div>
+          <div><div style={{ fontSize:11, color:'#888' }}>Estado</div><div>{item.estado}</div></div>
+          <div style={{ gridColumn:'1/-1' }}><div style={{ fontSize:11, color:'#888', marginBottom:4 }}>Observaciones</div><div style={{ background:'#fff', border:'1px solid '+BORDE, borderRadius:6, padding:'10px 12px', fontSize:13, color:TEXTO, whiteSpace:'pre-wrap' }}>{item.observaciones||'Sin observaciones.'}</div></div>
+        </>}
+      </div>
+    </div>
+  );
 }
 
 // ─── FORMULARIO JUICIO ───────────────────────────────────────────────────────
@@ -286,6 +343,7 @@ export default function Juicios() {
   const [loading, setLoading] = useState(true);
   const [mostrarForm, setMostrarForm] = useState(false);
   const [editando, setEditando] = useState(null);
+  const [viendo, setViendo] = useState(null);
   const [notif, setNotif] = useState('');
 
   useEffect(() => { cargarDatos(); }, [tab]);
@@ -367,7 +425,7 @@ export default function Juicios() {
       {/* Tabs */}
       <div style={{ display:'flex', gap:4, marginBottom:16, borderBottom:'2px solid '+BORDE }}>
         {tabs.map(t => (
-          <button key={t.id} onClick={() => { setTab(t.id); setMostrarForm(false); setEditando(null); }}
+          <button key={t.id} onClick={() => { setTab(t.id); setMostrarForm(false); setEditando(null); setViendo(null); }}
             style={{ padding:'10px 20px', fontSize:13, fontWeight: tab===t.id ? 700 : 400,
               color: tab===t.id ? VERDE : '#777', background:'transparent', border:'none',
               borderBottom: tab===t.id ? '3px solid '+VERDE : '3px solid transparent',
@@ -397,6 +455,11 @@ export default function Juicios() {
       {(mostrarForm || editando) && tab === 'acuerdos' && (
         <FormAcuerdo inicial={editando} onGuardar={onGuardar} onCancelar={() => { setMostrarForm(false); setEditando(null); }}/>
       )}
+
+      {/* Panel detalle */}
+      {viendo && tab === 'juicios'   && <PanelDetalle item={viendo} tipo="juicio"  onCerrar={() => setViendo(null)}/>}
+      {viendo && tab === 'sanciones' && <PanelDetalle item={viendo} tipo="sancion" onCerrar={() => setViendo(null)}/>}
+      {viendo && tab === 'acuerdos'  && <PanelDetalle item={viendo} tipo="acuerdo" onCerrar={() => setViendo(null)}/>}
 
       {/* Tabla Juicios */}
       {tab === 'juicios' && !mostrarForm && !editando && (
@@ -436,7 +499,8 @@ export default function Juicios() {
                         </td>
                         <td style={{ padding:'8px 10px', borderBottom:'1px solid '+BORDE }}>
                           <div style={{ display:'flex', gap:5 }}>
-                            <button onClick={()=>setEditando(j)} style={{ background:'#1e3a5f', color:'#60a5fa', border:'0.5px solid #1d4ed8', borderRadius:6, padding:'3px 8px', fontSize:11, cursor:'pointer' }}>Editar</button>
+                            <button onClick={()=>{ setViendo(j); setMostrarForm(false); setEditando(null); }} style={{ background:'#14532d', color:'#4ade80', border:'0.5px solid #166534', borderRadius:6, padding:'3px 8px', fontSize:11, cursor:'pointer' }}>Ver</button>
+                            <button onClick={()=>{ setEditando(j); setViendo(null); }} style={{ background:'#1e3a5f', color:'#60a5fa', border:'0.5px solid #1d4ed8', borderRadius:6, padding:'3px 8px', fontSize:11, cursor:'pointer' }}>Editar</button>
                             <button onClick={()=>eliminar('juicios_laborales',j.id)} style={{ background:'#450a0a', color:'#f87171', border:'0.5px solid #7f1d1d', borderRadius:6, padding:'3px 8px', fontSize:11, cursor:'pointer' }}>✕</button>
                           </div>
                         </td>
@@ -475,7 +539,8 @@ export default function Juicios() {
                       <td style={{ padding:'8px 10px', color:TEXTO, borderBottom:'1px solid '+BORDE, maxWidth:200 }}>{s.motivo}</td>
                       <td style={{ padding:'8px 10px', borderBottom:'1px solid '+BORDE }}>
                         <div style={{ display:'flex', gap:5 }}>
-                          <button onClick={()=>setEditando(s)} style={{ background:'#1e3a5f', color:'#60a5fa', border:'0.5px solid #1d4ed8', borderRadius:6, padding:'3px 8px', fontSize:11, cursor:'pointer' }}>Editar</button>
+                          <button onClick={()=>{ setViendo(s); setMostrarForm(false); setEditando(null); }} style={{ background:'#14532d', color:'#4ade80', border:'0.5px solid #166534', borderRadius:6, padding:'3px 8px', fontSize:11, cursor:'pointer' }}>Ver</button>
+                          <button onClick={()=>{ setEditando(s); setViendo(null); }} style={{ background:'#1e3a5f', color:'#60a5fa', border:'0.5px solid #1d4ed8', borderRadius:6, padding:'3px 8px', fontSize:11, cursor:'pointer' }}>Editar</button>
                           <button onClick={()=>eliminar('sanciones_disciplinarias',s.id)} style={{ background:'#450a0a', color:'#f87171', border:'0.5px solid #7f1d1d', borderRadius:6, padding:'3px 8px', fontSize:11, cursor:'pointer' }}>✕</button>
                         </div>
                       </td>
@@ -521,7 +586,8 @@ export default function Juicios() {
                         <td style={{ padding:'8px 10px', color:TEXTO, borderBottom:'1px solid '+BORDE, maxWidth:180 }}>{a.observaciones||'-'}</td>
                         <td style={{ padding:'8px 10px', borderBottom:'1px solid '+BORDE }}>
                           <div style={{ display:'flex', gap:5 }}>
-                            <button onClick={()=>setEditando(a)} style={{ background:'#1e3a5f', color:'#60a5fa', border:'0.5px solid #1d4ed8', borderRadius:6, padding:'3px 8px', fontSize:11, cursor:'pointer' }}>Editar</button>
+                            <button onClick={()=>{ setViendo(a); setMostrarForm(false); setEditando(null); }} style={{ background:'#14532d', color:'#4ade80', border:'0.5px solid #166534', borderRadius:6, padding:'3px 8px', fontSize:11, cursor:'pointer' }}>Ver</button>
+                            <button onClick={()=>{ setEditando(a); setViendo(null); }} style={{ background:'#1e3a5f', color:'#60a5fa', border:'0.5px solid #1d4ed8', borderRadius:6, padding:'3px 8px', fontSize:11, cursor:'pointer' }}>Editar</button>
                             <button onClick={()=>eliminar('acuerdos_mediaciones',a.id)} style={{ background:'#450a0a', color:'#f87171', border:'0.5px solid #7f1d1d', borderRadius:6, padding:'3px 8px', fontSize:11, cursor:'pointer' }}>✕</button>
                           </div>
                         </td>
