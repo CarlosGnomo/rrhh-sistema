@@ -109,11 +109,10 @@ function App() {
               <Layout><Honorarios /></Layout>
             </RutaProtegida>
           } />
-          <Route path="/juicios" element={
+<Route path="/juicios" element={
   <RutaProtegida soloAdmin>
     <Layout><Juicios /></Layout>
   </RutaProtegida>
-} />
           } />
           <Route path="/informe" element={
             <RutaProtegida soloAdmin>
