@@ -5,6 +5,7 @@ import Honorarios from './pages/Honorarios';
 import Jefaturas from './pages/Jefaturas';
 import Login from './pages/Login';
 import FormularioExterno from './pages/FormularioExterno';
+import Juicios from './pages/Juicios';
 
 // ─── Rutas protegidas ────────────────────────────────────────────────────────
 function RutaProtegida({ children, soloAdmin }) {
@@ -109,11 +110,10 @@ function App() {
             </RutaProtegida>
           } />
           <Route path="/juicios" element={
-            <RutaProtegida soloAdmin>
-              <Layout>
-                <div style={{ color: '#4a5568' }}>Juicios y sanciones — en construcción</div>
-              </Layout>
-            </RutaProtegida>
+  <RutaProtegida soloAdmin>
+    <Layout><Juicios /></Layout>
+  </RutaProtegida>
+} />
           } />
           <Route path="/informe" element={
             <RutaProtegida soloAdmin>
