@@ -40,7 +40,19 @@ export default function Honorarios() {
     numero_documento:'', banco:'', tipo_cuenta:'', numero_cuenta:'', correo:''
   });
 
-  useEffect(() => { cargarHonorarios(); }, []);
+  useEffect(() => {
+    cargarHonorarios();
+
+    // Suscripción en tiempo real: actualiza la tabla cuando llega un nuevo honorario
+    const channel = supabase
+      .channel('honorarios-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'honorarios' }, () => {
+        cargarHonorarios();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   async function cargarHonorarios() {
     setLoading(true);
@@ -55,7 +67,7 @@ export default function Honorarios() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!area || !form.rut || !form.nombre || !form.apellido_paterno || !form.monto_liquido) {
+    if (!area || !form.rut || !form.nombre || !form.apellido_paterno || !form.monto_liquido || !form.banco || !form.tipo_cuenta || !form.numero_cuenta) {
       setNotif('Por favor completa todos los campos obligatorios.');
       setTimeout(() => setNotif(''), 3000);
       return;
@@ -155,9 +167,9 @@ export default function Honorarios() {
             <div style={{ marginBottom:12 }}>
               <label style={flabel}>Datos bancarios</label>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:12 }}>
-                <input style={finput} name="banco" type="text" placeholder="Banco" value={form.banco} onChange={handleForm} />
-                <input style={finput} name="tipo_cuenta" type="text" placeholder="Tipo de cuenta" value={form.tipo_cuenta} onChange={handleForm} />
-                <input style={finput} name="numero_cuenta" type="text" placeholder="N° de cuenta" value={form.numero_cuenta} onChange={handleForm} />
+                <input style={finput} name="banco" type="text" placeholder="Banco" value={form.banco} onChange={handleForm} required />
+                <input style={finput} name="tipo_cuenta" type="text" placeholder="Tipo de cuenta" value={form.tipo_cuenta} onChange={handleForm} required />
+                <input style={finput} name="numero_cuenta" type="text" placeholder="N° de cuenta" value={form.numero_cuenta} onChange={handleForm} required />
                 <input style={finput} name="correo" type="email" placeholder="Correo electronico" value={form.correo} onChange={handleForm} />
               </div>
             </div>
@@ -191,7 +203,7 @@ export default function Honorarios() {
         ) : (
           <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
             <thead>
-              <tr>{['Prestador','Area','Subarea','Descripcion','Monto','Estado','N° doc.','Fecha'].map(h => (
+              <tr>{['Prestador','Area','Subarea','Descripcion','Monto','Estado','N° doc.','Banco','Tipo cuenta','N° cuenta','Fecha'].map(h => (
                 <th key={h} style={{ textAlign:'left', color:TEXTO, padding:'8px 10px', borderBottom:'1px solid '+BORDE, fontSize:11, textTransform:'uppercase', whiteSpace:'nowrap' }}>{h}</th>
               ))}</tr>
             </thead>
@@ -207,6 +219,9 @@ export default function Honorarios() {
                     <span style={{ color:estadoColor(h.estado), fontWeight:700 }}>{h.estado}</span>
                   </td>
                   <td style={{ padding:'8px 10px', color:TEXTO, borderBottom:'1px solid '+BORDE }}>{h.numero_documento}</td>
+                  <td style={{ padding:'8px 10px', color:TEXTO, borderBottom:'1px solid '+BORDE }}>{h.banco || '-'}</td>
+                  <td style={{ padding:'8px 10px', color:TEXTO, borderBottom:'1px solid '+BORDE }}>{h.tipo_cuenta || '-'}</td>
+                  <td style={{ padding:'8px 10px', color:TEXTO, borderBottom:'1px solid '+BORDE }}>{h.numero_cuenta || '-'}</td>
                   <td style={{ padding:'8px 10px', color:TEXTO, borderBottom:'1px solid '+BORDE, whiteSpace:'nowrap' }}>{h.fecha_ingreso ? new Date(h.fecha_ingreso).toLocaleDateString('es-CL') : '-'}</td>
                 </tr>
               ))}
