@@ -10,8 +10,7 @@ const VERDE_CLARO = '#f0f4e8';
 const FONDO       = '#eef2e6';
 const BORDE       = '#c8d5a8';
 const TEXTO       = '#4a5568';
-
-const COLORS = ['#4a5e2a','#d97706','#dc2626','#2563eb','#7c3aed','#0891b2','#be185d'];
+const API_URL     = import.meta.env.VITE_API_URL || 'https://rrhh-sistema-production.up.railway.app';
 
 const card = {
   background: '#fff', borderRadius: 10,
@@ -36,22 +35,14 @@ function KPI({ label, value, sub, color, alerta }) {
   );
 }
 
-function PlaceholderBUK({ titulo, subtitulo }) {
-  return (
-    <div style={{ ...card, border: '1px dashed ' + BORDE, background: VERDE_CLARO, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 120 }}>
-      <div style={{ fontSize: 12, fontWeight: 700, color: VERDE, marginBottom: 6 }}>{titulo}</div>
-      <div style={{ fontSize: 11, color: '#888' }}>{subtitulo}</div>
-      <div style={{ marginTop: 10, background: BORDE, borderRadius: 999, padding: '3px 12px', fontSize: 11, color: VERDE, fontWeight: 600 }}>Pendiente conexion BUK</div>
-    </div>
-  );
-}
-
 export default function Dashboard() {
   const [honorarios, setHonorarios]     = useState([]);
   const [presupuestos, setPresupuestos] = useState([]);
   const [juicios, setJuicios]           = useState([]);
   const [sanciones, setSanciones]       = useState([]);
   const [acuerdos, setAcuerdos]         = useState([]);
+  const [dotacion, setDotacion]         = useState(null);
+  const [loadingBuk, setLoadingBuk]     = useState(true);
   const [loading, setLoading]           = useState(true);
 
   useEffect(() => {
@@ -70,28 +61,37 @@ export default function Dashboard() {
       setAcuerdos(a.data || []);
       setLoading(false);
     }
+    async function cargarBuk() {
+      try {
+        const res  = await fetch(`${API_URL}/buk/dotacion`);
+        const data = await res.json();
+        setDotacion(data);
+      } catch (e) {
+        setDotacion(null);
+      } finally {
+        setLoadingBuk(false);
+      }
+    }
     cargar();
+    cargarBuk();
   }, []);
 
   // ── Calculos honorarios
-  const mesActual     = new Date().getMonth();
-  const anioActual    = new Date().getFullYear();
-  const honMes        = honorarios.filter(h => {
+  const mesActual      = new Date().getMonth();
+  const anioActual     = new Date().getFullYear();
+  const honMes         = honorarios.filter(h => {
     const f = new Date(h.fecha_ingreso);
     return f.getMonth() === mesActual && f.getFullYear() === anioActual;
   });
-  const pendientes    = honorarios.filter(h => h.estado === 'Pendiente' || h.estado === 'En revisión');
-  const aprobados     = honorarios.filter(h => h.estado === 'Aprobado');
-  const rechazados    = honorarios.filter(h => h.estado === 'Rechazado');
-  const montoAprobado = aprobados.reduce((s, h) => s + h.monto_liquido, 0);
-  const montoPendiente= pendientes.reduce((s, h) => s + h.monto_liquido, 0);
+  const pendientes     = honorarios.filter(h => h.estado === 'Pendiente' || h.estado === 'En revisión');
+  const aprobados      = honorarios.filter(h => h.estado === 'Aprobado');
+  const rechazados     = honorarios.filter(h => h.estado === 'Rechazado');
+  const montoAprobado  = aprobados.reduce((s, h) => s + h.monto_liquido, 0);
+  const montoPendiente = pendientes.reduce((s, h) => s + h.monto_liquido, 0);
+  const presupTotal    = presupuestos.reduce((s, p) => s + (p.presupuesto_anual || 0), 0);
+  const consumido      = aprobados.reduce((s, h) => s + h.monto_liquido, 0);
+  const pctEjecutado   = presupTotal > 0 ? ((consumido / presupTotal) * 100).toFixed(1) : 0;
 
-  // Presupuesto total
-  const presupTotal   = presupuestos.reduce((s, p) => s + (p.presupuesto_anual || 0), 0);
-  const consumido     = aprobados.reduce((s, h) => s + h.monto_liquido, 0);
-  const pctEjecutado  = presupTotal > 0 ? ((consumido / presupTotal) * 100).toFixed(1) : 0;
-
-  // Honorarios por area para grafico
   const porArea = honorarios.reduce((acc, h) => {
     if (!acc[h.area]) acc[h.area] = { aprobado: 0, pendiente: 0 };
     if (h.estado === 'Aprobado') acc[h.area].aprobado += h.monto_liquido;
@@ -100,12 +100,10 @@ export default function Dashboard() {
   }, {});
   const dataArea = Object.entries(porArea).map(([area, v]) => ({
     area: area.length > 12 ? area.slice(0, 12) + '…' : area,
-    areaFull: area,
     aprobado: Math.round(v.aprobado / 1000),
     pendiente: Math.round(v.pendiente / 1000),
   }));
 
-  // Dona estado boletas
   const dataEstado = [
     { name: 'Aprobadas', value: aprobados.length },
     { name: 'Pendientes', value: pendientes.length },
@@ -114,27 +112,34 @@ export default function Dashboard() {
   const COLORES_ESTADO = ['#16a34a', '#d97706', '#dc2626'];
 
   // ── Calculos juicios
-  const juiciosActivos  = juicios.filter(j => j.estado !== 'Cerrado');
-  const montoRiesgo     = juiciosActivos.reduce((s, j) => s + (j.monto_demanda || 0), 0);
-  const hoy             = new Date();
-  const proxAudiencias  = juicios
+  const juiciosActivos = juicios.filter(j => j.estado !== 'Cerrado');
+  const montoRiesgo    = juiciosActivos.reduce((s, j) => s + (j.monto_demanda || 0), 0);
+  const hoy            = new Date();
+  const proxAudiencias = juicios
     .flatMap(j => (j.fechas_audiencias || []).map(f => ({ ...j, proxFecha: new Date(f + 'T12:00:00') })))
     .filter(j => j.proxFecha >= hoy)
     .sort((a, b) => a.proxFecha - b.proxFecha)
     .slice(0, 5);
-
-  // ── Calculos sanciones y acuerdos
   const leyKarinActivos = acuerdos.filter(a => a.tipo === 'Ley Karin' && a.estado === 'En investigacion');
 
-  // ── Pendientes por area
   const pendientesPorArea = pendientes.reduce((acc, h) => {
     if (!acc[h.area]) acc[h.area] = { cantidad: 0, monto: 0 };
     acc[h.area].cantidad++;
     acc[h.area].monto += h.monto_liquido;
     return acc;
   }, {});
-  const pendientesTabla = Object.entries(pendientesPorArea)
-    .sort((a, b) => b[1].monto - a[1].monto);
+  const pendientesTabla = Object.entries(pendientesPorArea).sort((a, b) => b[1].monto - a[1].monto);
+
+  // ── Datos dotacion para gráfico
+  const dataDotacionArea = dotacion
+    ? Object.entries(dotacion.por_area)
+        .sort((a, b) => b[1].masa_bruta - a[1].masa_bruta)
+        .map(([area, v]) => ({
+          area: area.length > 14 ? area.slice(0, 14) + '…' : area,
+          dotacion: v.dotacion,
+          masa: Math.round(v.masa_bruta / 1000000 * 10) / 10,
+        }))
+    : [];
 
   if (loading) return (
     <div style={{ background: FONDO, minHeight: 'calc(100vh - 60px)', margin: '-20px', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -145,15 +150,121 @@ export default function Dashboard() {
   return (
     <div style={{ background: FONDO, minHeight: 'calc(100vh - 60px)', margin: '-20px', padding: '20px' }}>
 
-      {/* ── BLOQUE 1 y 2: Placeholders BUK ── */}
-      <div style={secLabel}>Remuneraciones y dotacion — pendiente conexion BUK</div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 4 }}>
-        <PlaceholderBUK titulo="Dotacion y costo laboral" subtitulo="Rem. bruta, neta, leyes sociales, finiquitos"/>
-        <PlaceholderBUK titulo="Asistencia y cumplimiento" subtitulo="Ausentismo, horas extras, atrasos"/>
-        <PlaceholderBUK titulo="Contratos y vencimientos" subtitulo="Contratos por vencer, renovaciones"/>
-      </div>
+        <div style={{ ...card, textAlign: 'center', color: VERDE, fontSize: 12, padding: 24 }}>Cargando datos de Buk...</div>
+      ) : dotacion ? (
+        <>
+          {/* KPIs dotación */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 12 }}>
+            <KPI
+              label="Dotación activa total"
+              value={dotacion.dotacion_total}
+              sub="Colaboradores activos en Buk"
+              color={VERDE}
+            />
+            <KPI
+              label="Masa salarial bruta"
+              value={'$' + (dotacion.masa_bruta_total / 1000000).toFixed(1) + 'M'}
+              sub="Suma sueldos base activos"
+              color={VERDE}
+            />
+            <KPI
+              label="Leyes sociales estimadas"
+              value={'$' + (dotacion.leyes_sociales_estimadas / 1000000).toFixed(1) + 'M'}
+              sub="~23% masa bruta (AFP+salud+SIS+AFC)"
+              color="#2563eb"
+            />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 12 }}>
+            <KPI
+              label="Costo total estimado"
+              value={'$' + (dotacion.costo_total_estimado / 1000000).toFixed(1) + 'M'}
+              sub="Bruto + leyes sociales"
+              color="#7c3aed"
+            />
+            <KPI
+              label="Finiquitos este mes"
+              value={dotacion.finiquitos_mes}
+              sub="Colaboradores con salida en el mes"
+              color={dotacion.finiquitos_mes > 3 ? '#dc2626' : '#d97706'}
+              alerta={dotacion.finiquitos_mes > 5 ? '#dc2626' : null}
+            />
+            <KPI
+              label="Contratos vencen en 30 días"
+              value={dotacion.contratos_vencen_30_dias}
+              sub="Requieren revisión o renovación"
+              color={dotacion.contratos_vencen_30_dias > 5 ? '#dc2626' : '#d97706'}
+              alerta={dotacion.contratos_vencen_30_dias > 10 ? '#dc2626' : null}
+            />
+          </div>
 
-      {/* ── BLOQUE 3: Honorarios externos ── */}
+          {/* Gráfico dotación por área */}
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12, marginBottom: 12 }}>
+            <div style={card}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: VERDE, marginBottom: 14 }}>Masa salarial bruta por área (MM$)</div>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={dataDotacionArea} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <XAxis dataKey="area" tick={{ fill: TEXTO, fontSize: 10 }} />
+                  <YAxis tickFormatter={v => `$${v}M`} tick={{ fill: TEXTO, fontSize: 10 }} />
+                  <Tooltip
+                    formatter={(v, name) => [name === 'masa' ? `$${v}M` : v, name === 'masa' ? 'Masa bruta' : 'Dotación']}
+                    contentStyle={{ background: '#fff', border: '1px solid ' + BORDE, borderRadius: 8, fontSize: 12 }}
+                  />
+                  <Bar dataKey="masa" name="masa" fill={VERDE} radius={[4, 4, 0, 0]}
+                    label={{ position: 'top', fill: TEXTO, fontSize: 10, formatter: v => v > 0 ? `$${v}M` : '' }} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div style={card}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: VERDE, marginBottom: 10 }}>Dotación por área</div>
+              <div style={{ overflowY: 'auto', maxHeight: 200 }}>
+                {dataDotacionArea.map((d, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', borderBottom: '1px solid ' + BORDE, fontSize: 12 }}>
+                    <span style={{ color: TEXTO }}>{d.area}</span>
+                    <span style={{ fontWeight: 700, color: VERDE }}>{d.dotacion}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Tabla contratos que vencen */}
+          {dotacion.detalle_contratos_vencen.length > 0 && (
+            <>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '8px 0 8px' }}>
+                ⚠ Contratos que vencen en los próximos 30 días ({dotacion.contratos_vencen_30_dias})
+              </div>
+              <div style={card}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <thead>
+                    <tr>{['Colaborador', 'Área', 'Tipo contrato', 'Vence'].map(h => (
+                      <th key={h} style={{ textAlign: 'left', color: TEXTO, padding: '6px 10px', borderBottom: '1px solid ' + BORDE, fontSize: 11, textTransform: 'uppercase' }}>{h}</th>
+                    ))}</tr>
+                  </thead>
+                  <tbody>
+                    {dotacion.detalle_contratos_vencen.map((c, i) => (
+                      <tr key={i}>
+                        <td style={{ padding: '6px 10px', fontWeight: 500, borderBottom: '1px solid ' + BORDE }}>{c.nombre}</td>
+                        <td style={{ padding: '6px 10px', color: TEXTO, borderBottom: '1px solid ' + BORDE }}>{c.area}</td>
+                        <td style={{ padding: '6px 10px', color: TEXTO, borderBottom: '1px solid ' + BORDE }}>{c.tipo}</td>
+                        <td style={{ padding: '6px 10px', color: '#dc2626', fontWeight: 700, borderBottom: '1px solid ' + BORDE }}>
+                          {new Date(c.vence).toLocaleDateString('es-CL')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </>
+      ) : (
+        <div style={{ ...card, border: '1px dashed ' + BORDE, background: VERDE_CLARO, textAlign: 'center', padding: 24 }}>
+          <div style={{ fontSize: 12, color: '#888' }}>No se pudo conectar con Buk. Verifica la API key.</div>
+        </div>
+      )}
+
+      {/* ── BLOQUE 2: Honorarios externos ── */}
       <div style={secLabel}>Honorarios externos</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
         <KPI label="Boletas pendientes" value={pendientes.length} sub={`$${montoPendiente.toLocaleString('es-CL')} en espera`} color={VERDE} alerta={pendientes.length > 5 ? '#dc2626' : null}/>
@@ -162,7 +273,6 @@ export default function Dashboard() {
         <KPI label="Total boletas ingresadas" value={honorarios.length} sub={`${honMes.length} ingresadas este mes`} color={VERDE}/>
       </div>
 
-      {/* ── Graficos honorarios ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12, marginBottom: 12 }}>
         <div style={card}>
           <div style={{ fontSize: 12, fontWeight: 700, color: VERDE, marginBottom: 14 }}>Honorarios por area (miles $)</div>
@@ -186,7 +296,6 @@ export default function Dashboard() {
             </ResponsiveContainer>
           )}
         </div>
-
         <div style={card}>
           <div style={{ fontSize: 12, fontWeight: 700, color: VERDE, marginBottom: 14 }}>Estado de boletas</div>
           {dataEstado.length === 0 ? (
@@ -215,7 +324,6 @@ export default function Dashboard() {
         <KPI label="Casos Ley Karin" value={leyKarinActivos.length} sub="En investigacion activa" color="#dc2626" alerta={leyKarinActivos.length > 0 ? '#dc2626' : null}/>
       </div>
 
-      {/* ── Fila 4a: Proximas audiencias ── */}
       <div style={secLabel}>Proximas audiencias judiciales</div>
       <div style={card}>
         {proxAudiencias.length === 0 ? (
@@ -253,7 +361,6 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* ── Fila 4b: Boletas pendientes por area ── */}
       <div style={secLabel}>Boletas pendientes de aprobacion por area</div>
       <div style={card}>
         {pendientesTabla.length === 0 ? (
