@@ -76,14 +76,13 @@ export default function Dashboard() {
     cargarBuk();
   }, []);
 
-  // ── Calculos honorarios
   const mesActual      = new Date().getMonth();
   const anioActual     = new Date().getFullYear();
   const honMes         = honorarios.filter(h => {
     const f = new Date(h.fecha_ingreso);
     return f.getMonth() === mesActual && f.getFullYear() === anioActual;
   });
-  const pendientes     = honorarios.filter(h => h.estado === 'Pendiente' || h.estado === 'En revisión');
+  const pendientes     = honorarios.filter(h => h.estado === 'Pendiente' || h.estado === 'En revision');
   const aprobados      = honorarios.filter(h => h.estado === 'Aprobado');
   const rechazados     = honorarios.filter(h => h.estado === 'Rechazado');
   const montoAprobado  = aprobados.reduce((s, h) => s + h.monto_liquido, 0);
@@ -95,11 +94,11 @@ export default function Dashboard() {
   const porArea = honorarios.reduce((acc, h) => {
     if (!acc[h.area]) acc[h.area] = { aprobado: 0, pendiente: 0 };
     if (h.estado === 'Aprobado') acc[h.area].aprobado += h.monto_liquido;
-    if (h.estado === 'Pendiente' || h.estado === 'En revisión') acc[h.area].pendiente += h.monto_liquido;
+    if (h.estado === 'Pendiente' || h.estado === 'En revision') acc[h.area].pendiente += h.monto_liquido;
     return acc;
   }, {});
   const dataArea = Object.entries(porArea).map(([area, v]) => ({
-    area: area.length > 12 ? area.slice(0, 12) + '…' : area,
+    area: area.length > 12 ? area.slice(0, 12) + '...' : area,
     aprobado: Math.round(v.aprobado / 1000),
     pendiente: Math.round(v.pendiente / 1000),
   }));
@@ -111,11 +110,10 @@ export default function Dashboard() {
   ].filter(d => d.value > 0);
   const COLORES_ESTADO = ['#16a34a', '#d97706', '#dc2626'];
 
-  // ── Calculos juicios
-  const juiciosActivos = juicios.filter(j => j.estado !== 'Cerrado');
-  const montoRiesgo    = juiciosActivos.reduce((s, j) => s + (j.monto_demanda || 0), 0);
-  const hoy            = new Date();
-  const proxAudiencias = juicios
+  const juiciosActivos  = juicios.filter(j => j.estado !== 'Cerrado');
+  const montoRiesgo     = juiciosActivos.reduce((s, j) => s + (j.monto_demanda || 0), 0);
+  const hoy             = new Date();
+  const proxAudiencias  = juicios
     .flatMap(j => (j.fechas_audiencias || []).map(f => ({ ...j, proxFecha: new Date(f + 'T12:00:00') })))
     .filter(j => j.proxFecha >= hoy)
     .sort((a, b) => a.proxFecha - b.proxFecha)
@@ -130,12 +128,11 @@ export default function Dashboard() {
   }, {});
   const pendientesTabla = Object.entries(pendientesPorArea).sort((a, b) => b[1].monto - a[1].monto);
 
-  // ── Datos dotacion para gráfico
   const dataDotacionArea = dotacion
     ? Object.entries(dotacion.por_area)
         .sort((a, b) => b[1].masa_bruta - a[1].masa_bruta)
         .map(([area, v]) => ({
-          area: area.length > 14 ? area.slice(0, 14) + '…' : area,
+          area: area.length > 14 ? area.slice(0, 14) + '...' : area,
           dotacion: v.dotacion,
           masa: Math.round(v.masa_bruta / 1000000 * 10) / 10,
         }))
@@ -150,73 +147,37 @@ export default function Dashboard() {
   return (
     <div style={{ background: FONDO, minHeight: 'calc(100vh - 60px)', margin: '-20px', padding: '20px' }}>
 
+      {/* BLOQUE 1: Dotacion y costo laboral (BUK) */}
+      <div style={secLabel}>Remuneraciones y dotacion</div>
+      {loadingBuk ? (
         <div style={{ ...card, textAlign: 'center', color: VERDE, fontSize: 12, padding: 24 }}>Cargando datos de Buk...</div>
       ) : dotacion ? (
         <>
-          {/* KPIs dotación */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 12 }}>
-            <KPI
-              label="Dotación activa total"
-              value={dotacion.dotacion_total}
-              sub="Colaboradores activos en Buk"
-              color={VERDE}
-            />
-            <KPI
-              label="Masa salarial bruta"
-              value={'$' + (dotacion.masa_bruta_total / 1000000).toFixed(1) + 'M'}
-              sub="Suma sueldos base activos"
-              color={VERDE}
-            />
-            <KPI
-              label="Leyes sociales estimadas"
-              value={'$' + (dotacion.leyes_sociales_estimadas / 1000000).toFixed(1) + 'M'}
-              sub="~23% masa bruta (AFP+salud+SIS+AFC)"
-              color="#2563eb"
-            />
+            <KPI label="Dotacion activa total" value={dotacion.dotacion_total} sub="Colaboradores activos en Buk" color={VERDE} />
+            <KPI label="Masa salarial bruta" value={'$' + (dotacion.masa_bruta_total / 1000000).toFixed(1) + 'M'} sub="Suma sueldos base activos" color={VERDE} />
+            <KPI label="Leyes sociales estimadas" value={'$' + (dotacion.leyes_sociales_estimadas / 1000000).toFixed(1) + 'M'} sub="~21.5% masa bruta (AFP+salud+SIS+AFC)" color="#2563eb" />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 12 }}>
-            <KPI
-              label="Costo total estimado"
-              value={'$' + (dotacion.costo_total_estimado / 1000000).toFixed(1) + 'M'}
-              sub="Bruto + leyes sociales"
-              color="#7c3aed"
-            />
-            <KPI
-              label="Finiquitos este mes"
-              value={dotacion.finiquitos_mes}
-              sub="Colaboradores con salida en el mes"
-              color={dotacion.finiquitos_mes > 3 ? '#dc2626' : '#d97706'}
-              alerta={dotacion.finiquitos_mes > 5 ? '#dc2626' : null}
-            />
-            <KPI
-              label="Contratos vencen en 30 días"
-              value={dotacion.contratos_vencen_30_dias}
-              sub="Requieren revisión o renovación"
-              color={dotacion.contratos_vencen_30_dias > 5 ? '#dc2626' : '#d97706'}
-              alerta={dotacion.contratos_vencen_30_dias > 10 ? '#dc2626' : null}
-            />
+            <KPI label="Costo total estimado" value={'$' + (dotacion.costo_total_estimado / 1000000).toFixed(1) + 'M'} sub="Bruto + leyes sociales" color="#7c3aed" />
+            <KPI label="Finiquitos este mes" value={dotacion.finiquitos_mes} sub="Colaboradores con salida en el mes" color={dotacion.finiquitos_mes > 3 ? '#dc2626' : '#d97706'} alerta={dotacion.finiquitos_mes > 5 ? '#dc2626' : null} />
+            <KPI label="Contratos vencen en 30 dias" value={dotacion.contratos_vencen_30_dias} sub="Requieren revision o renovacion" color={dotacion.contratos_vencen_30_dias > 5 ? '#dc2626' : '#d97706'} alerta={dotacion.contratos_vencen_30_dias > 10 ? '#dc2626' : null} />
           </div>
 
-          {/* Gráfico dotación por área */}
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12, marginBottom: 12 }}>
             <div style={card}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: VERDE, marginBottom: 14 }}>Masa salarial bruta por área (MM$)</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: VERDE, marginBottom: 14 }}>Masa salarial bruta por area (MM$)</div>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={dataDotacionArea} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <XAxis dataKey="area" tick={{ fill: TEXTO, fontSize: 10 }} />
                   <YAxis tickFormatter={v => `$${v}M`} tick={{ fill: TEXTO, fontSize: 10 }} />
-                  <Tooltip
-                    formatter={(v, name) => [name === 'masa' ? `$${v}M` : v, name === 'masa' ? 'Masa bruta' : 'Dotación']}
-                    contentStyle={{ background: '#fff', border: '1px solid ' + BORDE, borderRadius: 8, fontSize: 12 }}
-                  />
-                  <Bar dataKey="masa" name="masa" fill={VERDE} radius={[4, 4, 0, 0]}
-                    label={{ position: 'top', fill: TEXTO, fontSize: 10, formatter: v => v > 0 ? `$${v}M` : '' }} />
+                  <Tooltip formatter={(v, name) => [name === 'masa' ? `$${v}M` : v, name === 'masa' ? 'Masa bruta' : 'Dotacion']} contentStyle={{ background: '#fff', border: '1px solid ' + BORDE, borderRadius: 8, fontSize: 12 }} />
+                  <Bar dataKey="masa" name="masa" fill={VERDE} radius={[4, 4, 0, 0]} label={{ position: 'top', fill: TEXTO, fontSize: 10, formatter: v => v > 0 ? `$${v}M` : '' }} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
-
             <div style={card}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: VERDE, marginBottom: 10 }}>Dotación por área</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: VERDE, marginBottom: 10 }}>Dotacion por area</div>
               <div style={{ overflowY: 'auto', maxHeight: 200 }}>
                 {dataDotacionArea.map((d, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', borderBottom: '1px solid ' + BORDE, fontSize: 12 }}>
@@ -228,16 +189,15 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Tabla contratos que vencen */}
           {dotacion.detalle_contratos_vencen.length > 0 && (
             <>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '8px 0 8px' }}>
-                ⚠ Contratos que vencen en los próximos 30 días ({dotacion.contratos_vencen_30_dias})
+                Contratos que vencen en los proximos 30 dias ({dotacion.contratos_vencen_30_dias})
               </div>
               <div style={card}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                   <thead>
-                    <tr>{['Colaborador', 'Área', 'Tipo contrato', 'Vence'].map(h => (
+                    <tr>{['Colaborador', 'Area', 'Tipo contrato', 'Vence'].map(h => (
                       <th key={h} style={{ textAlign: 'left', color: TEXTO, padding: '6px 10px', borderBottom: '1px solid ' + BORDE, fontSize: 11, textTransform: 'uppercase' }}>{h}</th>
                     ))}</tr>
                   </thead>
@@ -247,9 +207,7 @@ export default function Dashboard() {
                         <td style={{ padding: '6px 10px', fontWeight: 500, borderBottom: '1px solid ' + BORDE }}>{c.nombre}</td>
                         <td style={{ padding: '6px 10px', color: TEXTO, borderBottom: '1px solid ' + BORDE }}>{c.area}</td>
                         <td style={{ padding: '6px 10px', color: TEXTO, borderBottom: '1px solid ' + BORDE }}>{c.tipo}</td>
-                        <td style={{ padding: '6px 10px', color: '#dc2626', fontWeight: 700, borderBottom: '1px solid ' + BORDE }}>
-                          {new Date(c.vence).toLocaleDateString('es-CL')}
-                        </td>
+                        <td style={{ padding: '6px 10px', color: '#dc2626', fontWeight: 700, borderBottom: '1px solid ' + BORDE }}>{new Date(c.vence).toLocaleDateString('es-CL')}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -264,7 +222,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ── BLOQUE 2: Honorarios externos ── */}
+      {/* BLOQUE 2: Honorarios externos */}
       <div style={secLabel}>Honorarios externos</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
         <KPI label="Boletas pendientes" value={pendientes.length} sub={`$${montoPendiente.toLocaleString('es-CL')} en espera`} color={VERDE} alerta={pendientes.length > 5 ? '#dc2626' : null}/>
@@ -283,14 +241,9 @@ export default function Dashboard() {
               <BarChart data={dataArea} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <XAxis dataKey="area" tick={{ fill: TEXTO, fontSize: 10 }} />
                 <YAxis tickFormatter={v => `$${v}k`} tick={{ fill: TEXTO, fontSize: 10 }} />
-                <Tooltip
-                  formatter={(v, name) => [`$${(v * 1000).toLocaleString('es-CL')}`, name === 'aprobado' ? 'Aprobado' : 'Pendiente']}
-                  contentStyle={{ background: '#fff', border: '1px solid ' + BORDE, borderRadius: 8, fontSize: 12 }}
-                />
-                <Bar dataKey="aprobado" name="Aprobado" fill="#4a5e2a" radius={[4, 4, 0, 0]}
-                  label={{ position: 'top', fill: TEXTO, fontSize: 10, formatter: v => v > 0 ? `$${v}k` : '' }}/>
-                <Bar dataKey="pendiente" name="Pendiente" fill="#d97706" radius={[4, 4, 0, 0]}
-                  label={{ position: 'top', fill: TEXTO, fontSize: 10, formatter: v => v > 0 ? `$${v}k` : '' }}/>
+                <Tooltip formatter={(v, name) => [`$${(v * 1000).toLocaleString('es-CL')}`, name === 'aprobado' ? 'Aprobado' : 'Pendiente']} contentStyle={{ background: '#fff', border: '1px solid ' + BORDE, borderRadius: 8, fontSize: 12 }} />
+                <Bar dataKey="aprobado" name="Aprobado" fill="#4a5e2a" radius={[4, 4, 0, 0]} label={{ position: 'top', fill: TEXTO, fontSize: 10, formatter: v => v > 0 ? `$${v}k` : '' }}/>
+                <Bar dataKey="pendiente" name="Pendiente" fill="#d97706" radius={[4, 4, 0, 0]} label={{ position: 'top', fill: TEXTO, fontSize: 10, formatter: v => v > 0 ? `$${v}k` : '' }}/>
                 <Legend wrapperStyle={{ fontSize: 11 }}/>
               </BarChart>
             </ResponsiveContainer>
@@ -303,8 +256,7 @@ export default function Dashboard() {
           ) : (
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
-                <Pie data={dataEstado} cx="50%" cy="50%" innerRadius={50} outerRadius={80}
-                  dataKey="value" label={({ name, value }) => `${value}`} labelLine={false}>
+                <Pie data={dataEstado} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" label={({ value }) => `${value}`} labelLine={false}>
                   {dataEstado.map((_, i) => <Cell key={i} fill={COLORES_ESTADO[i]}/>)}
                 </Pie>
                 <Tooltip contentStyle={{ background: '#fff', border: '1px solid ' + BORDE, borderRadius: 8, fontSize: 12 }}/>
@@ -315,7 +267,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── BLOQUE 3: Gestion legal ── */}
+      {/* BLOQUE 3: Gestion legal */}
       <div style={secLabel}>Gestion legal y disciplinaria</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
         <KPI label="Juicios activos" value={juiciosActivos.length} sub="Causas en curso" color="#d97706" alerta={juiciosActivos.length > 0 ? '#d97706' : null}/>
@@ -348,7 +300,7 @@ export default function Dashboard() {
                       <span style={{ background: '#fef3c7', color: '#92400e', borderRadius: 999, padding: '2px 10px', fontSize: 11, fontWeight: 700 }}>{j.estado}</span>
                     </td>
                     <td style={{ padding: '8px 10px', borderBottom: '1px solid ' + BORDE, color: alerta ? '#dc2626' : TEXTO, fontWeight: alerta ? 700 : 400, whiteSpace: 'nowrap' }}>
-                      {alerta ? '⚠ ' : ''}{j.proxFecha.toLocaleDateString('es-CL')}
+                      {alerta ? '! ' : ''}{j.proxFecha.toLocaleDateString('es-CL')}
                     </td>
                     <td style={{ padding: '8px 10px', borderBottom: '1px solid ' + BORDE }}>
                       <span style={{ color: alerta ? '#dc2626' : VERDE, fontWeight: 700 }}>{dias} dias</span>
@@ -364,7 +316,7 @@ export default function Dashboard() {
       <div style={secLabel}>Boletas pendientes de aprobacion por area</div>
       <div style={card}>
         {pendientesTabla.length === 0 ? (
-          <div style={{ color: '#888', fontSize: 12, textAlign: 'center', padding: 20 }}>No hay boletas pendientes. ✓</div>
+          <div style={{ color: '#888', fontSize: 12, textAlign: 'center', padding: 20 }}>No hay boletas pendientes.</div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
