@@ -46,6 +46,46 @@ router.get('/empleados', async (req, res) => {
   }
 });
 
+// GET /buk/diagnostico — prueba varios endpoints posibles de remuneraciones/subprocesos
+router.get('/diagnostico', async (req, res) => {
+  const intentos = [
+    '/payroll_processes',
+    '/payroll_subprocesses',
+    '/subprocesses',
+    '/payrolls',
+    '/payroll_processes/1527',
+    '/subprocesses/1527',
+    '/payroll_subprocesses/1527',
+    '/buk_subprocesses/1527',
+    '/settlements',
+    '/payslips',
+  ];
+
+  const resultados = [];
+
+  for (const path of intentos) {
+    try {
+      const r = await fetch(`${BUK_BASE_URL}${path}`, { headers: bukHeaders });
+      let cuerpo;
+      try {
+        cuerpo = await r.json();
+      } catch {
+        cuerpo = 'respuesta no-JSON (probablemente HTML de error)';
+      }
+      resultados.push({
+        path,
+        status: r.status,
+        ok: r.ok,
+        muestra: r.ok ? JSON.stringify(cuerpo).slice(0, 300) : cuerpo
+      });
+    } catch (err) {
+      resultados.push({ path, error: err.message });
+    }
+  }
+
+  res.json(resultados);
+});
+
 // GET /buk/dotacion
 router.get('/dotacion', async (req, res) => {
   try {
@@ -56,16 +96,13 @@ router.get('/dotacion', async (req, res) => {
     const anioActual = hoy.getFullYear();
     const en30dias   = new Date(hoy.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-    // Solo activos
     const activos = empleados.filter(e => e.status === 'activo');
 
-    // KPIs principales
     const dotacion_total            = activos.length;
     const masa_bruta_total          = activos.reduce((sum, e) => sum + (e.current_job?.base_wage || 0), 0);
     const leyes_sociales_estimadas  = Math.round(masa_bruta_total * 0.2153);
     const costo_total_estimado      = masa_bruta_total + leyes_sociales_estimadas;
 
-    // Dotación y masa por área
     const por_area = activos.reduce((acc, e) => {
       const area = e.current_job?.cost_center || 'Sin área';
       if (!acc[area]) acc[area] = { dotacion: 0, masa_bruta: 0 };
@@ -74,14 +111,12 @@ router.get('/dotacion', async (req, res) => {
       return acc;
     }, {});
 
-    // Finiquitos del mes actual
     const finiquitos_mes = empleados.filter(e => {
       if (!e.active_until) return false;
       const f = new Date(e.active_until);
       return f.getMonth() === mesActual && f.getFullYear() === anioActual;
     }).length;
 
-    // Contratos que vencen en los próximos 30 días (activos con contrato fijo)
     const contratos_vencen = activos.filter(e => {
       const fecha = e.current_job?.contract_finishing_date_1;
       if (!fecha) return false;
