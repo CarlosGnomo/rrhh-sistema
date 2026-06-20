@@ -46,44 +46,22 @@ router.get('/empleados', async (req, res) => {
   }
 });
 
-// GET /buk/diagnostico — prueba varios endpoints posibles de remuneraciones/subprocesos
-router.get('/diagnostico', async (req, res) => {
-  const intentos = [
-    '/payroll_processes',
-    '/payroll_subprocesses',
-    '/subprocesses',
-    '/payrolls',
-    '/payroll_processes/1527',
-    '/subprocesses/1527',
-    '/payroll_subprocesses/1527',
-    '/buk_subprocesses/1527',
-    '/settlements',
-    '/payslips',
-  ];
-
-  const resultados = [];
-
-  for (const path of intentos) {
+// GET /buk/liquidaciones?date=DD-MM-YYYY  — endpoint real: /payroll_detail/month
+router.get('/liquidaciones', async (req, res) => {
+  try {
+    const fecha = req.query.date || '31-05-2026'; // fin del mes a consultar
+    const url = `${BUK_BASE_URL}/payroll_detail/month?date=${fecha}&page_size=100`;
+    const r = await fetch(url, { headers: bukHeaders });
+    let cuerpo;
     try {
-      const r = await fetch(`${BUK_BASE_URL}${path}`, { headers: bukHeaders });
-      let cuerpo;
-      try {
-        cuerpo = await r.json();
-      } catch {
-        cuerpo = 'respuesta no-JSON (probablemente HTML de error)';
-      }
-      resultados.push({
-        path,
-        status: r.status,
-        ok: r.ok,
-        muestra: r.ok ? JSON.stringify(cuerpo).slice(0, 300) : cuerpo
-      });
-    } catch (err) {
-      resultados.push({ path, error: err.message });
+      cuerpo = await r.json();
+    } catch {
+      cuerpo = 'respuesta no-JSON';
     }
+    res.status(r.status).json({ url, status: r.status, cuerpo });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-
-  res.json(resultados);
 });
 
 // GET /buk/dotacion
