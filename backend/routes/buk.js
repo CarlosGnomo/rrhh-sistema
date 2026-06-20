@@ -9,6 +9,7 @@ const bukHeaders = {
   'auth_token': BUK_API_KEY,
 };
 
+// ── Empleados (todas las páginas) ──────────────────────────────
 async function getAllEmployees() {
   let all = [];
   let url = `${BUK_BASE_URL}/employees?per_page=100`;
@@ -21,7 +22,40 @@ async function getAllEmployees() {
   return all;
 }
 
-// GET /buk/ping
+// ── Liquidaciones de un mes (todas las páginas) ────────────────
+// date = último día del mes, formato DD-MM-YYYY
+async function getPayrollMonth(dateStr) {
+  let all = [];
+  let url = `${BUK_BASE_URL}/payroll_detail/month?date=${dateStr}&page_size=100`;
+  while (url) {
+    const res  = await fetch(url, { headers: bukHeaders });
+    const json = await res.json();
+    all = all.concat(json.data || []);
+    url = json.pagination?.next || null;
+  }
+  return all;
+}
+
+function ultimoDiaMes(anio, mes) {
+  // mes: 0-11 (JS). Retorna "DD-MM-YYYY"
+  const ultimo = new Date(anio, mes + 1, 0);
+  const dd = String(ultimo.getDate()).padStart(2, '0');
+  const mm = String(mes + 1).padStart(2, '0');
+  return `${dd}-${mm}-${anio}`;
+}
+
+function nombreMes(anio, mes) {
+  return new Date(anio, mes, 1).toLocaleString('es-CL', { month: 'short', year: '2-digit' });
+}
+
+// Calcula el total de aportes patronales (costo empresa adicional) de una liquidación
+function aportesPatronales(liq) {
+  return (liq.lines_settlement || [])
+    .filter(l => l.type === 'aporte')
+    .reduce((s, l) => s + (l.amount || 0), 0);
+}
+
+// ── GET /buk/ping ───────────────────────────────────────────────
 router.get('/ping', async (req, res) => {
   try {
     const response = await fetch(`${BUK_BASE_URL}/employees?per_page=1`, { headers: bukHeaders });
@@ -35,7 +69,7 @@ router.get('/ping', async (req, res) => {
   }
 });
 
-// GET /buk/empleados
+// ── GET /buk/empleados ────────────────────────────────────────
 router.get('/empleados', async (req, res) => {
   try {
     const response = await fetch(`${BUK_BASE_URL}/employees`, { headers: bukHeaders });
@@ -46,25 +80,60 @@ router.get('/empleados', async (req, res) => {
   }
 });
 
-// GET /buk/liquidaciones?date=DD-MM-YYYY  — endpoint real: /payroll_detail/month
-router.get('/liquidaciones', async (req, res) => {
+// ── GET /buk/remuneraciones — resumen 3 meses: liquido, bruto, costo empresa, leyes sociales ──
+router.get('/remuneraciones', async (req, res) => {
   try {
-    const fecha = req.query.date || '31-05-2026'; // fin del mes a consultar
-    const url = `${BUK_BASE_URL}/payroll_detail/month?date=${fecha}&page_size=100`;
-    const r = await fetch(url, { headers: bukHeaders });
-    let cuerpo;
-    try {
-      cuerpo = await r.json();
-    } catch {
-      cuerpo = 'respuesta no-JSON';
+    const hoy = new Date();
+    // Empezamos por el mes anterior (el actual normalmente no está cerrado aún)
+    const mesesData = [];
+
+    for (let i = 3; i >= 1; i--) {
+      const fecha = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+      const anio = fecha.getFullYear();
+      const mes  = fecha.getMonth();
+      const dateStr = ultimoDiaMes(anio, mes);
+
+      let liquidaciones = [];
+      try {
+        liquidaciones = await getPayrollMonth(dateStr);
+      } catch (e) {
+        liquidaciones = [];
+      }
+
+      const sueldoLiquido = liquidaciones.reduce((s, l) => s + (l.income_net || 0), 0);
+      const sueldoBruto   = liquidaciones.reduce((s, l) => s + (l.income_gross || 0), 0);
+      const leyesSociales = liquidaciones.reduce((s, l) => s + (l.total_legal_discounts || 0), 0);
+      const aportes       = liquidaciones.reduce((s, l) => s + aportesPatronales(l), 0);
+      const costoEmpresa  = sueldoBruto + aportes; // bruto + aportes patronales
+
+      mesesData.push({
+        mes: nombreMes(anio, mes),
+        anio,
+        mesNumero: mes + 1,
+        cantidadLiquidaciones: liquidaciones.length,
+        sueldoLiquido,
+        sueldoBruto,
+        leyesSociales,
+        aportesPatronales: aportes,
+        costoEmpresa,
+      });
     }
-    res.status(r.status).json({ url, status: r.status, cuerpo });
+
+    // Tomamos el mes más reciente con datos como "mes actual" para los KPIs
+    const mesesConDatos = mesesData.filter(m => m.cantidadLiquidaciones > 0);
+    const ultimoMes = mesesConDatos[mesesConDatos.length - 1] || mesesData[mesesData.length - 1];
+
+    res.json({
+      mes_actual: ultimoMes,
+      historico_3_meses: mesesData,
+    });
+
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// GET /buk/dotacion
+// ── GET /buk/dotacion ─────────────────────────────────────────
 router.get('/dotacion', async (req, res) => {
   try {
     const empleados = await getAllEmployees();
