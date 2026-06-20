@@ -186,72 +186,100 @@ export default function Dashboard() {
       {loadingRem ? (
         <div style={{ ...card, textAlign: 'center', color: VERDE, fontSize: 12, padding: 24 }}>Cargando remuneraciones...</div>
       ) : remuneraciones ? (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-          {/* Cuadro 1: Sueldo liquido y Costo empresa - graficos separados */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1.15fr 1fr', gap: 12, marginBottom: 12 }}>
+          {/* Cuadro 1: Sueldo liquido - barras angostas, fondo oscuro sutil */}
           <div style={card}>
             <div>
               <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Sueldo liquido ({remuneraciones.mes_actual.mes})</div>
               <div style={{ fontSize: 20, fontWeight: 700, color: VERDE, marginBottom: 8 }}>
-                ${(remuneraciones.mes_actual.sueldoLiquido / 1000000).toFixed(1)}M
+                ${Math.round(remuneraciones.mes_actual.sueldoLiquido / 1000000)}M
               </div>
             </div>
-            <ResponsiveContainer width="100%" height={110}>
-              <LineChart data={dataTendenciaRem} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-                <XAxis dataKey="mes" tick={{ fill: TEXTO, fontSize: 10 }} />
-                <YAxis tickFormatter={v => `$${v}M`} tick={{ fill: TEXTO, fontSize: 10 }} width={45} />
-                <Tooltip
-                  formatter={v => [`$${v}M`, 'Sueldo liquido']}
-                  contentStyle={{ background: '#fff', border: '1px solid ' + BORDE, borderRadius: 8, fontSize: 12 }}
-                />
-                <Line type="monotone" dataKey="liquido" name="liquido" stroke={VERDE} strokeWidth={2} dot={{ r: 4 }}
-                  label={{ position: 'top', fill: VERDE, fontSize: 10, formatter: v => `$${v}M` }} />
-              </LineChart>
-            </ResponsiveContainer>
+            <div style={{ background: '#1c2418', borderRadius: 8, padding: '10px 4px 2px' }}>
+              <ResponsiveContainer width="100%" height={130}>
+                <BarChart data={dataTendenciaRem} margin={{ top: 22, right: 14, left: 0, bottom: 0 }} barCategoryGap="45%">
+                  <defs>
+                    <linearGradient id="gradLiquido" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#7a9c4e" />
+                      <stop offset="100%" stopColor={VERDE} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="mes" tick={{ fill: '#9aa68a', fontSize: 10 }} axisLine={{ stroke: '#3a442f' }} tickLine={false} />
+                  <YAxis hide domain={[0, dataMax => Math.ceil(dataMax * 1.35)]} />
+                  <Tooltip
+                    formatter={v => [`$${Math.round(v)}M`, 'Sueldo liquido']}
+                    contentStyle={{ background: '#fff', border: '1px solid ' + BORDE, borderRadius: 8, fontSize: 12 }}
+                  />
+                  <Bar dataKey="liquido" name="liquido" fill="url(#gradLiquido)" radius={[6, 6, 2, 2]} maxBarSize={34}
+                    label={{ position: 'top', fill: '#cfe0b8', fontSize: 11, fontWeight: 700, formatter: v => `$${Math.round(v)}M`, offset: 8 }} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
 
             <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid ' + BORDE }}>
               <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Costo empresa ({remuneraciones.mes_actual.mes})</div>
               <div style={{ fontSize: 20, fontWeight: 700, color: '#7c3aed', marginBottom: 8 }}>
-                ${(remuneraciones.mes_actual.costoEmpresa / 1000000).toFixed(1)}M
+                ${Math.round(remuneraciones.mes_actual.costoEmpresa / 1000000)}M
               </div>
             </div>
-            <ResponsiveContainer width="100%" height={110}>
-              <LineChart data={dataTendenciaRem} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-                <XAxis dataKey="mes" tick={{ fill: TEXTO, fontSize: 10 }} />
-                <YAxis tickFormatter={v => `$${v}M`} tick={{ fill: TEXTO, fontSize: 10 }} width={45} />
-                <Tooltip
-                  formatter={v => [`$${v}M`, 'Costo empresa']}
-                  contentStyle={{ background: '#fff', border: '1px solid ' + BORDE, borderRadius: 8, fontSize: 12 }}
-                />
-                <Line type="monotone" dataKey="costoEmpresa" name="costoEmpresa" stroke="#7c3aed" strokeWidth={2} dot={{ r: 4 }}
-                  label={{ position: 'top', fill: '#7c3aed', fontSize: 10, formatter: v => `$${v}M` }} />
-              </LineChart>
-            </ResponsiveContainer>
+            <div style={{ background: '#1c1530', borderRadius: 8, padding: '22px 4px 6px' }}>
+              <ResponsiveContainer width="100%" height={130}>
+                <LineChart data={dataTendenciaRem} margin={{ top: 18, right: 16, left: 0, bottom: 0 }}>
+                  <defs>
+                    <filter id="glowMorado" x="-50%" y="-50%" width="200%" height="200%">
+                      <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" result="blur" />
+                      <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                      </feMerge>
+                    </filter>
+                  </defs>
+                  <XAxis dataKey="mes" tick={{ fill: '#b29adb', fontSize: 10 }} axisLine={{ stroke: '#3a2e54' }} tickLine={false} />
+                  <YAxis hide domain={[0, dataMax => Math.ceil(dataMax * 1.4)]} />
+                  <Tooltip
+                    formatter={v => [`$${Math.round(v)}M`, 'Costo empresa']}
+                    contentStyle={{ background: '#fff', border: '1px solid ' + BORDE, borderRadius: 8, fontSize: 12 }}
+                  />
+                  <Line type="monotone" dataKey="costoEmpresa" name="costoEmpresa" stroke="#a47cf2" strokeWidth={2.5}
+                    dot={{ r: 5, fill: '#a47cf2', stroke: '#1c1530', strokeWidth: 2 }}
+                    style={{ filter: 'url(#glowMorado)' }}
+                    label={{ position: 'top', fill: '#cdb8f5', fontSize: 11, fontWeight: 700, formatter: v => `$${Math.round(v)}M`, offset: 12 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
 
-          {/* Cuadro 2: Leyes sociales por mes */}
+          {/* Cuadro 2: Leyes sociales - barras angostas, mismo estilo */}
           <div style={card}>
-            <div style={{ marginBottom: 14 }}>
+            <div style={{ marginBottom: 10 }}>
               <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Leyes sociales ({remuneraciones.mes_actual.mes})</div>
               <div style={{ fontSize: 20, fontWeight: 700, color: '#2563eb' }}>
-                ${(remuneraciones.mes_actual.leyesSociales / 1000000).toFixed(1)}M
+                ${Math.round(remuneraciones.mes_actual.leyesSociales / 1000000)}M
               </div>
               <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>
                 Cotizaciones previsionales y de salud descontadas a colaboradores
               </div>
             </div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: VERDE, marginBottom: 8 }}>Leyes sociales por mes (MM$)</div>
-            <ResponsiveContainer width="100%" height={160}>
-              <BarChart data={dataLeyesSociales} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-                <XAxis dataKey="mes" tick={{ fill: TEXTO, fontSize: 10 }} />
-                <YAxis tickFormatter={v => `$${v}M`} tick={{ fill: TEXTO, fontSize: 10 }} />
-                <Tooltip
-                  formatter={v => [`$${v}M`, 'Leyes sociales']}
-                  contentStyle={{ background: '#fff', border: '1px solid ' + BORDE, borderRadius: 8, fontSize: 12 }}
-                />
-                <Bar dataKey="leyesSociales" name="leyesSociales" fill="#2563eb" radius={[4, 4, 0, 0]}
-                  label={{ position: 'top', fill: TEXTO, fontSize: 10, formatter: v => `$${v}M` }} />
-              </BarChart>
-            </ResponsiveContainer>
+            <div style={{ background: '#141c28', borderRadius: 8, padding: '22px 4px 6px' }}>
+              <ResponsiveContainer width="100%" height={170}>
+                <BarChart data={dataLeyesSociales} margin={{ top: 22, right: 14, left: 0, bottom: 0 }} barCategoryGap="45%">
+                  <defs>
+                    <linearGradient id="gradLeyes" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#7badf5" />
+                      <stop offset="100%" stopColor="#2563eb" />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="mes" tick={{ fill: '#8aa0c2', fontSize: 10 }} axisLine={{ stroke: '#2b3a4f' }} tickLine={false} />
+                  <YAxis hide domain={[0, dataMax => Math.ceil(dataMax * 1.35)]} />
+                  <Tooltip
+                    formatter={v => [`$${Math.round(v)}M`, 'Leyes sociales']}
+                    contentStyle={{ background: '#fff', border: '1px solid ' + BORDE, borderRadius: 8, fontSize: 12 }}
+                  />
+                  <Bar dataKey="leyesSociales" name="leyesSociales" fill="url(#gradLeyes)" radius={[6, 6, 2, 2]} maxBarSize={34}
+                    label={{ position: 'top', fill: '#9fc2f5', fontSize: 11, fontWeight: 700, formatter: v => `$${Math.round(v)}M`, offset: 8 }} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
       ) : (
