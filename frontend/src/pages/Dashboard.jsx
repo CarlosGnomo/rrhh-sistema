@@ -153,20 +153,20 @@ export default function Dashboard() {
         }))
     : [];
 
-  // Datos para grafico de tendencia sueldo liquido / costo empresa
+  // Datos para grafico sueldo liquido / costo empresa (valores completos en pesos)
   const dataTendenciaRem = remuneraciones
     ? remuneraciones.historico_3_meses.map(m => ({
         mes: m.mes,
-        liquido: Math.round(m.sueldoLiquido / 1000000 * 10) / 10,
-        costoEmpresa: Math.round(m.costoEmpresa / 1000000 * 10) / 10,
+        liquido: m.sueldoLiquido,
+        costoEmpresa: m.costoEmpresa,
       }))
     : [];
 
-  // Datos para grafico leyes sociales por mes
+  // Datos para grafico leyes sociales por mes (valores completos en pesos)
   const dataLeyesSociales = remuneraciones
     ? remuneraciones.historico_3_meses.map(m => ({
         mes: m.mes,
-        leyesSociales: Math.round(m.leyesSociales / 1000000 * 10) / 10,
+        leyesSociales: m.leyesSociales,
       }))
     : [];
 
@@ -182,121 +182,118 @@ export default function Dashboard() {
       {/* BLOQUE 1: Remuneraciones y dotacion (BUK) */}
       <div style={secLabel}>Remuneraciones y dotacion</div>
 
-      {/* ── Sueldo liquido + Costo empresa con tendencia ── */}
+      {/* ── Sueldo liquido + Costo empresa + Leyes sociales ── */}
       {loadingRem ? (
         <div style={{ ...card, textAlign: 'center', color: VERDE, fontSize: 12, padding: 24 }}>Cargando remuneraciones...</div>
       ) : remuneraciones ? (
         <div style={{ display: 'grid', gridTemplateColumns: '1.15fr 1fr', gap: 12, marginBottom: 12 }}>
-          {/* Cuadro 1: Sueldo liquido + Costo empresa - barras + tendencia, fondo gris carbon */}
+          {/* Cuadro 1: Sueldo liquido + Costo empresa */}
           <div style={card}>
             <div>
               <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Sueldo liquido ({remuneraciones.mes_actual.mes})</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: VERDE, marginBottom: 8 }}>
-                ${Math.round(remuneraciones.mes_actual.sueldoLiquido / 1000000)}M
+              <div style={{ fontSize: 20, fontWeight: 700, color: VERDE, marginBottom: 10 }}>
+                ${remuneraciones.mes_actual.sueldoLiquido.toLocaleString('es-CL')}
               </div>
             </div>
-            <div style={{ background: '#2a2f38', borderRadius: 8, padding: '26px 6px 4px' }}>
-              <ResponsiveContainer width="100%" height={140}>
-                <ComposedChart data={dataTendenciaRem} margin={{ top: 26, right: 20, left: 0, bottom: 0 }} barCategoryGap="28%">
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <ResponsiveContainer width="65%" height={150} minWidth={220}>
+                <BarChart data={dataTendenciaRem} margin={{ top: 28, right: 8, left: 8, bottom: 0 }} barCategoryGap="35%">
                   <defs>
-                    <linearGradient id="gradLiquido" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#8fb85e" />
-                      <stop offset="100%" stopColor={VERDE} />
+                    <linearGradient id="gradLiquido" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#3c4d20" />
+                      <stop offset="50%" stopColor={VERDE} />
+                      <stop offset="100%" stopColor="#7a9c4e" />
                     </linearGradient>
                   </defs>
-                  <XAxis dataKey="mes" tick={{ fill: '#aab89a', fontSize: 10 }} axisLine={{ stroke: '#454c58' }} tickLine={false} />
-                  <YAxis hide domain={[0, dataMax => Math.ceil(dataMax * 1.4)]} />
+                  <XAxis dataKey="mes" tick={{ fill: TEXTO, fontSize: 10 }} axisLine={{ stroke: BORDE }} tickLine={false} />
+                  <YAxis hide domain={[0, dataMax => Math.ceil(dataMax * 1.35)]} />
                   <Tooltip
-                    formatter={v => [`$${Math.round(v)}M`, 'Sueldo liquido']}
+                    formatter={v => [`$${Math.round(v).toLocaleString('es-CL')}`, 'Sueldo liquido']}
                     contentStyle={{ background: '#fff', border: '1px solid ' + BORDE, borderRadius: 8, fontSize: 12 }}
                   />
-                  <Bar dataKey="liquido" name="liquido" fill="url(#gradLiquido)" radius={[6, 6, 2, 2]} maxBarSize={52}>
-                    <LabelList dataKey="liquido" position="top" angle={-25} dy={-10} dx={6}
-                      content={({ x, y, value }) => (
-                        <text x={x} y={y} dy={-10} dx={20} fill="#d7e8bc" fontSize={11} fontWeight={700}
-                          transform={`rotate(-25, ${x}, ${y})`} textAnchor="middle">
-                          {`$${Math.round(value)}M`}
-                        </text>
-                      )} />
+                  <Bar dataKey="liquido" name="liquido" fill="url(#gradLiquido)" radius={[5, 5, 1, 1]} maxBarSize={42}
+                    style={{ filter: 'drop-shadow(0 3px 3px rgba(74,94,42,0.35))' }}>
+                    <LabelList dataKey="liquido" position="top" content={({ x, y, value }) => (
+                      <text x={x} y={y - 6} fill={VERDE} fontSize={11} fontWeight={700} textAnchor="middle">
+                        {`$${Math.round(value).toLocaleString('es-CL')}`}
+                      </text>
+                    )} />
                   </Bar>
-                  <Line type="monotone" dataKey="liquido" stroke="#e8f5d0" strokeWidth={1.5} dot={{ r: 3, fill: '#e8f5d0' }} legendType="none" />
-                </ComposedChart>
+                </BarChart>
               </ResponsiveContainer>
             </div>
 
             <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid ' + BORDE }}>
               <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Costo empresa ({remuneraciones.mes_actual.mes})</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: '#7c3aed', marginBottom: 8 }}>
-                ${Math.round(remuneraciones.mes_actual.costoEmpresa / 1000000)}M
+              <div style={{ fontSize: 20, fontWeight: 700, color: VERDE, marginBottom: 10 }}>
+                ${remuneraciones.mes_actual.costoEmpresa.toLocaleString('es-CL')}
               </div>
             </div>
-            <div style={{ background: '#2a2f38', borderRadius: 8, padding: '26px 6px 4px' }}>
-              <ResponsiveContainer width="100%" height={140}>
-                <ComposedChart data={dataTendenciaRem} margin={{ top: 26, right: 20, left: 0, bottom: 0 }} barCategoryGap="28%">
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <ResponsiveContainer width="65%" height={150} minWidth={220}>
+                <BarChart data={dataTendenciaRem} margin={{ top: 28, right: 8, left: 8, bottom: 0 }} barCategoryGap="35%">
                   <defs>
-                    <linearGradient id="gradCosto" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#b497f0" />
-                      <stop offset="100%" stopColor="#7c3aed" />
+                    <linearGradient id="gradCosto" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#3c4d20" />
+                      <stop offset="50%" stopColor={VERDE} />
+                      <stop offset="100%" stopColor="#7a9c4e" />
                     </linearGradient>
                   </defs>
-                  <XAxis dataKey="mes" tick={{ fill: '#bcaee0', fontSize: 10 }} axisLine={{ stroke: '#454c58' }} tickLine={false} />
-                  <YAxis hide domain={[0, dataMax => Math.ceil(dataMax * 1.4)]} />
+                  <XAxis dataKey="mes" tick={{ fill: TEXTO, fontSize: 10 }} axisLine={{ stroke: BORDE }} tickLine={false} />
+                  <YAxis hide domain={[0, dataMax => Math.ceil(dataMax * 1.35)]} />
                   <Tooltip
-                    formatter={v => [`$${Math.round(v)}M`, 'Costo empresa']}
+                    formatter={v => [`$${Math.round(v).toLocaleString('es-CL')}`, 'Costo empresa']}
                     contentStyle={{ background: '#fff', border: '1px solid ' + BORDE, borderRadius: 8, fontSize: 12 }}
                   />
-                  <Bar dataKey="costoEmpresa" name="costoEmpresa" fill="url(#gradCosto)" radius={[6, 6, 2, 2]} maxBarSize={52}>
-                    <LabelList dataKey="costoEmpresa" position="top"
-                      content={({ x, y, value }) => (
-                        <text x={x} y={y} dy={-10} dx={20} fill="#e3d8fa" fontSize={11} fontWeight={700}
-                          transform={`rotate(-25, ${x}, ${y})`} textAnchor="middle">
-                          {`$${Math.round(value)}M`}
-                        </text>
-                      )} />
+                  <Bar dataKey="costoEmpresa" name="costoEmpresa" fill="url(#gradCosto)" radius={[5, 5, 1, 1]} maxBarSize={42}
+                    style={{ filter: 'drop-shadow(0 3px 3px rgba(74,94,42,0.35))' }}>
+                    <LabelList dataKey="costoEmpresa" position="top" content={({ x, y, value }) => (
+                      <text x={x} y={y - 6} fill={VERDE} fontSize={11} fontWeight={700} textAnchor="middle">
+                        {`$${Math.round(value).toLocaleString('es-CL')}`}
+                      </text>
+                    )} />
                   </Bar>
-                  <Line type="monotone" dataKey="costoEmpresa" stroke="#f0e8fc" strokeWidth={1.5} dot={{ r: 3, fill: '#f0e8fc' }} legendType="none" />
-                </ComposedChart>
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          {/* Cuadro 2: Leyes sociales - barras + tendencia, mismo estilo */}
+          {/* Cuadro 2: Leyes sociales */}
           <div style={card}>
             <div style={{ marginBottom: 10 }}>
               <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>Leyes sociales ({remuneraciones.mes_actual.mes})</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: '#2563eb' }}>
-                ${Math.round(remuneraciones.mes_actual.leyesSociales / 1000000)}M
+              <div style={{ fontSize: 20, fontWeight: 700, color: VERDE }}>
+                ${remuneraciones.mes_actual.leyesSociales.toLocaleString('es-CL')}
               </div>
               <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>
                 Cotizaciones previsionales y de salud descontadas a colaboradores
               </div>
             </div>
-            <div style={{ background: '#2a2f38', borderRadius: 8, padding: '26px 6px 4px' }}>
-              <ResponsiveContainer width="100%" height={180}>
-                <ComposedChart data={dataLeyesSociales} margin={{ top: 26, right: 20, left: 0, bottom: 0 }} barCategoryGap="28%">
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <ResponsiveContainer width="70%" height={190} minWidth={220}>
+                <BarChart data={dataLeyesSociales} margin={{ top: 28, right: 8, left: 8, bottom: 0 }} barCategoryGap="35%">
                   <defs>
-                    <linearGradient id="gradLeyes" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#7badf5" />
-                      <stop offset="100%" stopColor="#2563eb" />
+                    <linearGradient id="gradLeyes" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#3c4d20" />
+                      <stop offset="50%" stopColor={VERDE} />
+                      <stop offset="100%" stopColor="#7a9c4e" />
                     </linearGradient>
                   </defs>
-                  <XAxis dataKey="mes" tick={{ fill: '#9ab6dd', fontSize: 10 }} axisLine={{ stroke: '#454c58' }} tickLine={false} />
-                  <YAxis hide domain={[0, dataMax => Math.ceil(dataMax * 1.4)]} />
+                  <XAxis dataKey="mes" tick={{ fill: TEXTO, fontSize: 10 }} axisLine={{ stroke: BORDE }} tickLine={false} />
+                  <YAxis hide domain={[0, dataMax => Math.ceil(dataMax * 1.35)]} />
                   <Tooltip
-                    formatter={v => [`$${Math.round(v)}M`, 'Leyes sociales']}
+                    formatter={v => [`$${Math.round(v).toLocaleString('es-CL')}`, 'Leyes sociales']}
                     contentStyle={{ background: '#fff', border: '1px solid ' + BORDE, borderRadius: 8, fontSize: 12 }}
                   />
-                  <Bar dataKey="leyesSociales" name="leyesSociales" fill="url(#gradLeyes)" radius={[6, 6, 2, 2]} maxBarSize={52}>
-                    <LabelList dataKey="leyesSociales" position="top"
-                      content={({ x, y, value }) => (
-                        <text x={x} y={y} dy={-10} dx={20} fill="#cfe2fb" fontSize={11} fontWeight={700}
-                          transform={`rotate(-25, ${x}, ${y})`} textAnchor="middle">
-                          {`$${Math.round(value)}M`}
-                        </text>
-                      )} />
+                  <Bar dataKey="leyesSociales" name="leyesSociales" fill="url(#gradLeyes)" radius={[5, 5, 1, 1]} maxBarSize={42}
+                    style={{ filter: 'drop-shadow(0 3px 3px rgba(74,94,42,0.35))' }}>
+                    <LabelList dataKey="leyesSociales" position="top" content={({ x, y, value }) => (
+                      <text x={x} y={y - 6} fill={VERDE} fontSize={11} fontWeight={700} textAnchor="middle">
+                        {`$${Math.round(value).toLocaleString('es-CL')}`}
+                      </text>
+                    )} />
                   </Bar>
-                  <Line type="monotone" dataKey="leyesSociales" stroke="#e3f0ff" strokeWidth={1.5} dot={{ r: 3, fill: '#e3f0ff' }} legendType="none" />
-                </ComposedChart>
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
